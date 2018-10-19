@@ -26,7 +26,7 @@ CGenParser::~CGenParser()
 }
 
 
-void CGenParser::SetSourceData(const TCHAR *data, UINT datalen)
+void CGenParser::SetSourceData(const TCHAR *data, size_t datalen)
 {
 	m_data = (TCHAR *)data;
 	m_datalen = datalen;

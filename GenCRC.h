@@ -16,7 +16,7 @@ public:
 
 	CCrc32();
 
-	UINT32 Calculate(const UINT8 *data, UINT32 len, UINT32 initvalue = INITVAL);
+	UINT32 Calculate(const UINT8 *data, size_t len, UINT32 initvalue = INITVAL);
 
 protected:
 	void InitializeTable();

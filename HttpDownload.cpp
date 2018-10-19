@@ -23,16 +23,19 @@ All other copyrighted material contained herein is noted and rights attributed t
 
 #if defined(_DEBUG) || defined(DEBUG)
 
+#if !defined(DOWNLOADER_USES_WININET)
+
 #if defined(_M_X64)
 #pragma comment(lib, "libcurl_64D.lib")
 #else
 #pragma comment(lib, "libcurl_32D.lib")
 #endif
 
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "wldap32.lib")
-#pragma comment(lib, "Crypt32.lib")
+#endif
+
 #else
+
+#if !defined(DOWNLOADER_USES_WININET)
 
 #if defined(_M_X64)
 #pragma comment(lib, "libcurl_64.lib")
@@ -40,10 +43,17 @@ All other copyrighted material contained herein is noted and rights attributed t
 #pragma comment(lib, "libcurl_32.lib")
 #endif
 
+#endif
+
+#endif
+
+#if defined(DOWNLOADER_USES_WININET)
+#pragma comment(lib, "wininet.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wldap32.lib")
 #pragma comment(lib, "Crypt32.lib")
 #endif
+
 
 #define BUFFER_SIZE		8192
 
@@ -113,7 +123,7 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 		// If we are writing to a particular directory, then prepend it here...
 		if (szDestDir)
 		{
-			_tcscpy(filepath, szDestDir);
+			_tcscpy_s(filepath, MAX_PATH, szDestDir);
 		}
 
 		// append the file name
@@ -137,10 +147,13 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 			return false;
 		}
 
-		// Open the url specified
-		m_hUrl = InternetOpenUrl(m_hInet, szUrl, NULL, 0,
-			INTERNET_FLAG_RESYNCHRONIZE | INTERNET_FLAG_NO_COOKIES | INTERNET_FLAG_NO_UI,
-			(DWORD_PTR)this);
+        DWORD flags = INTERNET_FLAG_RESYNCHRONIZE | INTERNET_FLAG_NO_COOKIES | INTERNET_FLAG_NO_UI;
+        
+        if (_tcsnicmp(szUrl, _T("https"), 5) == 0)
+            flags |= INTERNET_FLAG_IGNORE_CERT_DATE_INVALID | INTERNET_FLAG_IGNORE_CERT_CN_INVALID | INTERNET_FLAG_SECURE;
+
+        // Open the url specified
+        m_hUrl = InternetOpenUrl(m_hInet, szUrl, NULL, 0, flags, (DWORD_PTR)this);
 
 		// if we didn't get the hurl back immediately (which we won't, because it's an async op)
 		// then wait until the semaphore clears

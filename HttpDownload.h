@@ -9,6 +9,8 @@ All other copyrighted material contained herein is noted and rights attributed t
 
 #pragma once
 
+#define DOWNLOADER_USES_WININET
+
 #if defined(DOWNLOADER_USES_WININET)
 #include <wininet.h>
 #else

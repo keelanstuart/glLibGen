@@ -49,7 +49,7 @@ void CCrc32::InitializeTable()
 	}
 }
 
-UINT32 CCrc32::Calculate(const UINT8 *data, UINT32 len, UINT32 initvalue)
+UINT32 CCrc32::Calculate(const UINT8 *data, size_t len, UINT32 initvalue)
 {
 	UINT32 ret = initvalue;
 
