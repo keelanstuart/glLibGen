@@ -104,6 +104,22 @@ CHttpDownloader::~CHttpDownloader()
 #endif
 }
 
+bool CreateDirectories(const TCHAR *dir)
+{
+    if (PathIsRoot(dir) || PathFileExists(dir))
+        return false;
+
+    bool ret = true;
+
+    TCHAR _dir[MAX_PATH];
+    _tcscpy_s(_dir, dir);
+    PathRemoveFileSpec(_dir);
+    ret &= CreateDirectories(_dir);
+
+    ret &= (CreateDirectory(dir, NULL) ? true : false);
+
+    return ret;
+}
 
 BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFile, const TCHAR *szDestDir, float *ppct, BOOL *pabortque, UINT expected_size)
 {
@@ -111,6 +127,8 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 		return false;
 
 	BOOL retval = false;
+
+    CreateDirectories(szDestDir);
 
 #if defined(DOWNLOADER_USES_WININET)
 
@@ -183,138 +201,142 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 				errcode = _ttoi(buf_query);
 			}
 
-			buflen = sizeof(buf_query);
-			buf_query[0] = '\0';
+            if (errcode < 400)
+            {
+                buflen = sizeof(buf_query);
+                buf_query[0] = '\0';
 
-			BOOL chunked = false;
+                BOOL chunked = false;
 
-			// Determine if the data is encoded in a chunked format
-			if (HttpQueryInfo(m_hUrl, HTTP_QUERY_TRANSFER_ENCODING, buf_query, &buflen, NULL))
-			{
-				if (!_tcsicmp(buf_query, _T("chunked")))
-				{
-					chunked = true;
-				}
-			}
+                // Determine if the data is encoded in a chunked format
+                if (HttpQueryInfo(m_hUrl, HTTP_QUERY_TRANSFER_ENCODING, buf_query, &buflen, NULL))
+                {
+                    if (!_tcsicmp(buf_query, _T("chunked")))
+                    {
+                        chunked = true;
+                    }
+                }
 
-			buflen = sizeof(buf_query);
+                buflen = sizeof(buf_query);
 
-			// query the length of the file we're grabbing
-			if (HttpQueryInfo(m_hUrl, HTTP_QUERY_CONTENT_LENGTH, buf_query, &buflen, NULL) || chunked)
-			{
-				HANDLE hfile = NULL;
-				BOOL empty_file = true;
+                // query the length of the file we're grabbing
+                if (HttpQueryInfo(m_hUrl, HTTP_QUERY_CONTENT_LENGTH, buf_query, &buflen, NULL) || chunked)
+                {
+                    HANDLE hfile = NULL;
+                    BOOL empty_file = true;
 
-				// If a destination file was specified, then create the file handle
-				if (szDestFile)
-				{
-					// create the file
-					hfile = CreateFile(filepath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-					if (hfile == (HANDLE)-1)
-						hfile = 0;
-				}
+                    // If a destination file was specified, then create the file handle
+                    if (szDestFile)
+                    {
+                        // create the file
+                        hfile = CreateFile(filepath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                        if (hfile == (HANDLE)-1)
+                            hfile = 0;
+                    }
 
-				DWORD amount_to_download = chunked ? BUFFER_SIZE : _ttoi(buf_query);
+                    DWORD amount_to_download = chunked ? BUFFER_SIZE : _ttoi(buf_query);
 
-				if (amount_to_download && (errcode < 400))
-				{
-					empty_file = false;
+                    if (amount_to_download && (errcode < 400))
+                    {
+                        empty_file = false;
 
-					DWORD amount_downloaded = 0;
-					INTERNET_BUFFERS inbuf[2];
+                        DWORD amount_downloaded = 0;
+                        INTERNET_BUFFERS inbuf[2];
 
-					int bufidx;
+                        int bufidx;
 
-					// initialize our async inet buffers
-					for (bufidx = 0; bufidx < 2; bufidx++)
-					{
-						ZeroMemory(&inbuf[bufidx], sizeof(INTERNET_BUFFERS));
+                        // initialize our async inet buffers
+                        for (bufidx = 0; bufidx < 2; bufidx++)
+                        {
+                            ZeroMemory(&inbuf[bufidx], sizeof(INTERNET_BUFFERS));
 
-						inbuf[bufidx].dwStructSize = sizeof(INTERNET_BUFFERS);
-						inbuf[bufidx].lpvBuffer = (LPVOID)buffer[bufidx];
-						inbuf[bufidx].dwBufferLength = BUFFER_SIZE;
-						inbuf[bufidx].Next = bufidx ? &inbuf[0] : &inbuf[1];
-					}
+                            inbuf[bufidx].dwStructSize = sizeof(INTERNET_BUFFERS);
+                            inbuf[bufidx].lpvBuffer = (LPVOID)buffer[bufidx];
+                            inbuf[bufidx].dwBufferLength = BUFFER_SIZE;
+                            inbuf[bufidx].Next = bufidx ? &inbuf[0] : &inbuf[1];
+                        }
 
-					bufidx = 1;
+                        bufidx = 1;
 
-					do
-					{
-						bufidx ^= 1;
+                        do
+                        {
+                            bufidx ^= 1;
 
-						// Read data from the internet into our current buffer
-						if (!InternetReadFileEx(m_hUrl, &inbuf[bufidx], IRF_NO_WAIT, (DWORD_PTR)this))
-						{
-							DWORD lasterr = GetLastError();
-							if (lasterr == ERROR_IO_PENDING)
-							{
-								if (WaitForSingleObject(m_SemReqComplete, 20000) == WAIT_TIMEOUT)
-								{
-									break;
-								}
-							}
-							else
-							{
-								break;
-							}
-						}
+                            // Read data from the internet into our current buffer
+                            if (!InternetReadFileEx(m_hUrl, &inbuf[bufidx], IRF_NO_WAIT, (DWORD_PTR)this))
+                            {
+                                DWORD lasterr = GetLastError();
+                                if (lasterr == ERROR_IO_PENDING)
+                                {
+                                    if (WaitForSingleObject(m_SemReqComplete, 20000) == WAIT_TIMEOUT)
+                                    {
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
 
-						// if the buffer length is non-zero...
-						if (inbuf[bufidx].dwBufferLength)
-						{
-							void *data_start = inbuf[bufidx].lpvBuffer;
+                            // if the buffer length is non-zero...
+                            if (inbuf[bufidx].dwBufferLength)
+                            {
+                                void *data_start = inbuf[bufidx].lpvBuffer;
 
-							DWORD data_size = inbuf[bufidx].dwBufferLength;
+                                DWORD data_size = inbuf[bufidx].dwBufferLength;
 
-							// and if we have a valid file handle, write data
-							if (hfile)
-							{
-								DWORD bwritten;
-								WriteFile(hfile, data_start, data_size, &bwritten, NULL);
-							}
+                                // and if we have a valid file handle, write data
+                                if (hfile)
+                                {
+                                    DWORD bwritten;
+                                    WriteFile(hfile, data_start, data_size, &bwritten, NULL);
+                                }
 
-							amount_downloaded += inbuf[bufidx].dwBufferLength;
+                                amount_downloaded += inbuf[bufidx].dwBufferLength;
 
-							if (ppct)
-								*ppct = chunked ? 0 : (float)amount_downloaded / (float)amount_to_download;
+                                if (ppct)
+                                    *ppct = chunked ? 0 : (float)amount_downloaded / (float)amount_to_download;
 
-							inbuf[bufidx].dwBufferLength = BUFFER_SIZE;
-						}
+                                inbuf[bufidx].dwBufferLength = BUFFER_SIZE;
+                            }
 
-						// The abort que was set, so we're closing the file, deleting it, and getting out...
-						if (pabortque && *pabortque)
-						{
-							if (hfile)
-							{
-								CloseHandle(hfile);
-								hfile = NULL;
-								DeleteFile(filepath);
-							}
+                            // The abort que was set, so we're closing the file, deleting it, and getting out...
+                            if (pabortque && *pabortque)
+                            {
+                                if (hfile)
+                                {
+                                    CloseHandle(hfile);
+                                    hfile = NULL;
+                                    DeleteFile(filepath);
+                                }
 
-							// Exit the download loop
-							break;
-						}
-					}
-					while ((inbuf[bufidx].dwBufferLength > 0) && (amount_downloaded < amount_to_download));
-					// inbuf[bufidx].dwBufferLength will be 0 when all data is read
+                                // Exit the download loop
+                                break;
+                            }
+                        }
+                        while ((inbuf[bufidx].dwBufferLength > 0) && (amount_downloaded < amount_to_download));
 
-					// we should have the file now
-					retval = (amount_downloaded == amount_to_download);
-				}
+                        // inbuf[bufidx].dwBufferLength will be 0 when all data is read
 
-				if (hfile)
-				{
-					CloseHandle(hfile);
+                        // we should have the file now
+                        retval = (amount_downloaded == amount_to_download);
+                    }
 
-					// we have an empty file because it didn't exist on the server
-					if (empty_file)
-					{
-						DeleteFile(filepath);
-					}
-				}
-			}
-	
-			InternetCloseHandle(m_hUrl);
+                    if (hfile)
+                    {
+                        CloseHandle(hfile);
+
+                        // we have an empty file because it didn't exist on the server
+                        if (empty_file)
+                        {
+                            DeleteFile(filepath);
+                        }
+                    }
+                }
+            }
+
+            InternetCloseHandle(m_hUrl);
 			m_hUrl = NULL;
 
 			// Release the semaphore

@@ -6,5 +6,8 @@ any fitness of purpose of this software.
 All other copyrighted material contained herein is noted and rights attributed to individual copyright holders.
 
 glLibGen requires the following other libraries to support it's operation:
-	cURL
+	cURL (optional; see HttpDownload.h)
 	tinyxml2
+
+glLibTest (part of the main sln) uses glLibGen as a pre-build event to generate its OpenGL code. It then uses it to render a very simple
+scene in an MFC window.

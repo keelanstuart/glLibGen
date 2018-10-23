@@ -192,6 +192,7 @@ const XMLElement *EvaluatePath(const XMLElement *root, const TCHAR *path)
 
 tstring gOGLHeaderLocation = _T("gl.h");
 tstring gOGLEXTHeaderLocation = _T("glext.h");
+tstring gOGLKHRPlatformHeaderLocation = _T("khrplatform.h");
 tstring gClassName = _T("COpenGL");
 tstring gOutputBaseFileName = _T("gllib");
 tstring gOutputDir = _T(".");
@@ -228,29 +229,30 @@ typedef struct sCmdLineParamData
 
 SCmdLineParamData gParams[] =
 {
-	{ _T("glh"),		SCmdLineParamData::CLPT_STRING,		&gOGLHeaderLocation,		_T("local or remote (HTTP) file path to \"gl.h\"") },
-	{ _T("glexth"),		SCmdLineParamData::CLPT_STRING,		&gOGLEXTHeaderLocation,		_T("local or remote (HTTP) file path to \"glext.h\"") },
-	{ _T("class"),		SCmdLineParamData::CLPT_STRING,		&gClassName,				_T("name of the class that will be generated") },
-	{ _T("basefile"),	SCmdLineParamData::CLPT_STRING,		&gOutputBaseFileName,		_T("base filename that the C++ code will go into (file.cpp and file.h)") },
-	{ _T("outdir"),		SCmdLineParamData::CLPT_STRING,		&gOutputDir,				_T("directory where the code will be generated and gl headers copied") },
-	{ _T("ver"),		SCmdLineParamData::CLPT_VERSION,	&gOGLVersionMax,			_T("determines the maximum version of OpemGL to support") },
+	{ _T("glh"),		SCmdLineParamData::CLPT_STRING,		&gOGLHeaderLocation,	        	_T("local or remote (HTTP) file path to \"gl.h\"") },
+	{ _T("glexth"),		SCmdLineParamData::CLPT_STRING,		&gOGLEXTHeaderLocation,		        _T("local or remote (HTTP) file path to \"glext.h\"") },
+    { _T("khrh"),		SCmdLineParamData::CLPT_STRING,		&gOGLKHRPlatformHeaderLocation,		_T("local or remote (HTTP) file path to \"khrplatform.h\"") },
+    { _T("class"),		SCmdLineParamData::CLPT_STRING,		&gClassName,			        	_T("name of the class that will be generated") },
+	{ _T("basefile"),	SCmdLineParamData::CLPT_STRING,		&gOutputBaseFileName,	        	_T("base filename that the C++ code will go into (file.cpp and file.h)") },
+	{ _T("outdir"),		SCmdLineParamData::CLPT_STRING,		&gOutputDir,			        	_T("directory where the code will be generated and gl headers copied") },
+	{ _T("ver"),		SCmdLineParamData::CLPT_VERSION,	&gOGLVersionMax,		        	_T("determines the maximum version of OpemGL to support") },
 
-	{ _T("arb"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_ARB],	_T("includes ARB extensions") },
-	{ _T("ext"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_EXT],	_T("includes EXT extensions") },
-	{ _T("nv"),			SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_NV],		_T("includes nVidia extensions") },
-	{ _T("amd"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_AMD],	_T("includes AMD extensions") },
-	{ _T("ati"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_ATI],	_T("includes ATI extensions") },
-	{ _T("intel"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_INTEL],	_T("includes Intel extensions") },
-	{ _T("sgi"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_SGI],	_T("includes Silicon Graphics extensions") },
-	{ _T("sun"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_SUN],	_T("includes Sun Microsystems extensions") },
-	{ _T("apple"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_APPLE],	_T("includes Apple extensions") },
-	{ _T("oes"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	_T("includes OES extensions") },
-	{ _T("ingr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	_T("includes Intergraph extensions") },
-	{ _T("khr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	_T("includes Khronos extensions") },
+	{ _T("arb"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_ARB],	            _T("includes ARB extensions") },
+	{ _T("ext"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_EXT],	            _T("includes EXT extensions") },
+	{ _T("nv"),			SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_NV],		            _T("includes nVidia extensions") },
+	{ _T("amd"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_AMD],	            _T("includes AMD extensions") },
+	{ _T("ati"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_ATI],	            _T("includes ATI extensions") },
+	{ _T("intel"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_INTEL],	            _T("includes Intel extensions") },
+	{ _T("sgi"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_SGI],	            _T("includes Silicon Graphics extensions") },
+	{ _T("sun"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_SUN],	            _T("includes Sun Microsystems extensions") },
+	{ _T("apple"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_APPLE],	            _T("includes Apple extensions") },
+	{ _T("oes"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes OES extensions") },
+	{ _T("ingr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes Intergraph extensions") },
+	{ _T("khr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes Khronos extensions") },
 
-	{ _T("afx"),		SCmdLineParamData::CLPT_CMD,	&gAfxInclude,				_T("adds \"#include <stdafx.h>\"") },
+	{ _T("afx"),		SCmdLineParamData::CLPT_CMD,	&gAfxInclude,				            _T("adds \"#include <stdafx.h>\"") },
 
-	{ nullptr,			SCmdLineParamData::CLPT_NONE,	nullptr,					nullptr }
+	{ nullptr,			SCmdLineParamData::CLPT_NONE,	nullptr,					            nullptr }
 };
 
 bool ParseCommandLineParams(const SCmdLineParamData *paramdata, const TCHAR *cmdline)
@@ -381,8 +383,9 @@ bool ParseFunctionsFromFile(const TCHAR *filename, TMapStrStr &functype_to_funcn
 				{
 					if (p.IsToken(_T("#")))
 					{
-						p.NextToken();
-						if (p.IsToken(_T("define")))
+                        p.NextToken();
+
+                        if (p.IsToken(_T("define")))
 						{
 							p.NextToken();
 							tstring def = p.GetCurrentTokenString();
@@ -429,8 +432,42 @@ bool ParseFunctionsFromFile(const TCHAR *filename, TMapStrStr &functype_to_funcn
 								}
 							}
 						}
+                        else if (p.IsToken(_T("endif")))
+                        {
+                            p.ToEndOfLine();
+                            tstring chk = p.GetCurrentTokenString();
+                            const TCHAR *vstr = nullptr;
 
-						p.NextLine();
+                            // we found a version end-block... parse out the numbers
+                            if (nullptr != (vstr = _tcsstr(chk.c_str(), _T("GL_VERSION_"))))
+                            {
+                                UINT major = 1;
+                                UINT minor = 0;
+
+                                std::replace(chk.begin(), chk.end(), _T('_'), _T(' '));
+
+                                CGenParser verp;
+                                verp.SetSourceData(vstr, _tcslen(vstr) * sizeof(TCHAR));
+
+                                while ((verp.GetCurrentTokenType() != CGenParser::TT_NUMBER) && verp.NextToken()) {}
+                                if (verp.GetCurrentTokenType() == CGenParser::TT_NUMBER)
+                                {
+                                    major = _ttoi(verp.GetCurrentTokenString());
+                                    if (verp.NextToken())
+                                    {
+                                        minor = _ttoi(verp.GetCurrentTokenString());
+                                    }
+                                }
+
+                                if ((curver.major == major) && (curver.minor == minor))
+                                {
+                                    curver.major = 1;
+                                    curver.minor = 0;
+                                }
+                            }
+                        }
+
+   						p.NextLine();
 					}
 					else if (p.IsToken(_T("APIENTRYP")))
 					{
@@ -441,7 +478,7 @@ bool ParseFunctionsFromFile(const TCHAR *filename, TMapStrStr &functype_to_funcn
 					{
 						p.NextToken();	// this should be the function name
 
-						if (p.IsToken(_T("*")))
+                        if (p.IsToken(_T("*")))
 						{
 							ParseAPIENTRYP(p, functype_to_funcname);
 							continue;
@@ -606,6 +643,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 	oh.PrintF(_T("/* This file was generated by GLlibgen, a utility by Keelan Stuart */")); oh.NextLine(1);
 	oh.PrintF(_T("#pragma once")); oh.NextLine(2);
+
 	oh.PrintF(_T("#include \"gl.h\"")); oh.NextLine();
 	oh.PrintF(_T("#include \"glext.h\"")); oh.NextLine(1);
 	oh.PrintF(_T("class %s"), gClassName.c_str()); oh.NextLine();
@@ -632,7 +670,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	// write out all the wrapper functions
 	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
 	{
-		// is this extension's vendor allowed?
+        // is this extension's vendor allowed?
 		if (!gOSVIncludes[cit->second.osv])
 			continue;
 
@@ -672,8 +710,26 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 			gLog->PrintF(_T("."));
 
 			gotdoc = docdl.DownloadHttpFile(doclink.c_str(), doclocal.c_str(), _T("."));
-			if (gotdoc)
-				break;
+            if (gotdoc)
+            {
+                char buf[2049];
+                FILE *tmpf = nullptr;
+
+                // khronos returns a page that says 404, but doesn't indicate that in the html response... boooo...
+                // so look for their string in the returned data.
+                if ((_tfopen_s(&tmpf, doclocal.c_str(), _T("rb")) != EINVAL) && tmpf)
+                {
+                    size_t tmpbuflen = fread(buf, sizeof(char), 2048, tmpf);
+                    buf[tmpbuflen] = 0;
+                    if (strstr(buf, "404… Oops"))
+                        gotdoc = false;
+
+                    fclose(tmpf);
+                }
+
+                if (gotdoc)
+                    break;
+            }
 
 			dli++;
 		}
@@ -788,11 +844,22 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	bool wrote_functype = false;
 	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
 	{
-		if (!cit->second.needsfunctype)
+        if (!cit->second.needsfunctype)
 			continue;
 
-		if (cit->second.osv > EOSV_ARB)
-			continue;
+        // is this extension's vendor allowed?
+        if (!gOSVIncludes[cit->second.osv])
+            continue;
+
+        // is this extension's version is higher than what we're allowed?
+        if (cit->second.ver.major <= gOGLVersionMax.major)
+        {
+            // the major version was ok... minor, too?
+            if (cit->second.ver.minor > gOGLVersionMax.minor)
+                continue;
+        }
+        else
+            continue;
 
 		gLog->Flush();
 
@@ -819,11 +886,25 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	// write out all the function pointer member variables
 	for (TMapStrStr::const_iterator cit = functype_to_funcname.begin(); cit != functype_to_funcname.end(); cit++)
 	{
-		TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
-		if ((fnit == funcname_to_funcdata.end()) || fnit->second.osv > EOSV_ARB)
+        TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
+		if ((fnit == funcname_to_funcdata.end()))
 			continue;
 
-		if (!cit->second.empty())
+        // is this extension's vendor allowed?
+        if (!gOSVIncludes[fnit->second.osv])
+            continue;
+
+        // is this extension's version is higher than what we're allowed?
+        if (fnit->second.ver.major <= gOGLVersionMax.major)
+        {
+            // the major version was ok... minor, too?
+            if (fnit->second.ver.minor > gOGLVersionMax.minor)
+                continue;
+        }
+        else
+            continue;
+
+        if (!cit->second.empty())
 		{
 			oh.NextLine();
 			oh.PrintF(_T("%s _%s;"), cit->first.c_str(), cit->second.c_str());
@@ -908,9 +989,23 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	// write out all the function pointer member variables
 	for (TMapStrStr::const_iterator cit = functype_to_funcname.begin(); cit != functype_to_funcname.end(); cit++)
 	{
-		TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
-		if ((fnit == funcname_to_funcdata.end()) || fnit->second.osv > EOSV_ARB)
+        TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
+		if ((fnit == funcname_to_funcdata.end()))
 			continue;
+
+        // is this extension's vendor allowed?
+        if (!gOSVIncludes[fnit->second.osv])
+            continue;
+
+        // is this extension's version is higher than what we're allowed?
+        if (fnit->second.ver.major <= gOGLVersionMax.major)
+        {
+            // the major version was ok... minor, too?
+            if (fnit->second.ver.minor > gOGLVersionMax.minor)
+                continue;
+        }
+        else
+            continue;
 
 		if (!cit->second.empty())
 		{
@@ -926,10 +1021,21 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
 	{
-		if (cit->second.osv > EOSV_ARB)
-			continue;
+        // is this extension's vendor allowed?
+        if (!gOSVIncludes[cit->second.osv])
+            continue;
 
-		bool needsret = false;
+        // is this extension's version is higher than what we're allowed?
+        if (cit->second.ver.major <= gOGLVersionMax.major)
+        {
+            // the major version was ok... minor, too?
+            if (cit->second.ver.minor > gOGLVersionMax.minor)
+                continue;
+        }
+        else
+            continue;
+
+        bool needsret = false;
 		if (_tcscmp(cit->second.ret.c_str(), _T("void")))
 			needsret = true;
 
@@ -1029,6 +1135,35 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	return true;
 }
 
+void CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname, const TCHAR *dstfullname, const TCHAR *dstdir)
+{
+    if (PathIsURL(src))
+    {
+        gLog->PrintF(_T("Downloading:"));
+        gLog->IncIndent();
+        gLog->NextLine();
+        gLog->PrintF(_T("\"%s\" -> \"%s\""), src, dstfullname);
+
+        if (!dl.DownloadHttpFile(src, dstname, dstdir))
+        {
+
+        }
+    }
+    else
+    {
+        gLog->PrintF(_T("Copying:"));
+        gLog->IncIndent();
+        gLog->NextLine();
+        gLog->PrintF(_T("\"%s\" -> \"%s\""), src, dstfullname);
+
+        CopyFile(src, dstfullname, FALSE);
+    }
+
+    gLog->DecIndent();
+
+    gLog->NextLine(1);
+}
+
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
 	int nRetCode = 0;
@@ -1072,64 +1207,21 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			if ((basedir.back() != _T('\\')) && (basedir.back() != _T('/')))
 				basedir += _T('\\');
 
+            tstring khrplatformbasedir = basedir + _T("KHR\\");
+
 			tstring glloc = basedir + _T("gl.h");
 			tstring glextloc = basedir + _T("glext.h");
-			tstring out_name_h = basedir + gOutputBaseFileName + _T(".h");
+            tstring khrplatformloc = khrplatformbasedir + _T("khrplatform.h");
+            tstring out_name_h = basedir + gOutputBaseFileName + _T(".h");
 			tstring out_name_cpp = basedir + gOutputBaseFileName + _T(".cpp");
 
 			CHttpDownloader dl;
 
-			if (PathIsURL(gOGLHeaderLocation.c_str()))
-			{
-				gLog->PrintF(_T("Downloading:"));
-				gLog->IncIndent();
-				gLog->NextLine();
-				gLog->PrintF(_T("\"%s\" -> \"%s\""), gOGLHeaderLocation.c_str(), glloc.c_str());
+            CopyOrDownload(dl, gOGLHeaderLocation.c_str(), _T("gl.h"), glloc.c_str(), basedir.c_str());
 
-				if (!dl.DownloadHttpFile(gOGLHeaderLocation.c_str(), _T("gl.h"), basedir.c_str()))
-				{
+            CopyOrDownload(dl, gOGLEXTHeaderLocation.c_str(), _T("glext.h"), glextloc.c_str(), basedir.c_str());
 
-				}
-			}
-			else
-			{
-				gLog->PrintF(_T("Copying:"));
-				gLog->IncIndent();
-				gLog->NextLine();
-				gLog->PrintF(_T("\"%s\" -> \"%s\""), gOGLHeaderLocation.c_str(), glloc.c_str());
-
-				CopyFile(gOGLHeaderLocation.c_str(), glloc.c_str(), FALSE);
-			}
-
-			gLog->DecIndent();
-
-			gLog->NextLine(1);
-
-			if (PathIsURL(gOGLEXTHeaderLocation.c_str()))
-			{
-				gLog->PrintF(_T("Downloading:"));
-				gLog->IncIndent();
-				gLog->NextLine();
-				gLog->PrintF(_T("\"%s\" -> \"%s\""), gOGLEXTHeaderLocation.c_str(), glextloc.c_str());
-
-				if (!dl.DownloadHttpFile(gOGLEXTHeaderLocation.c_str(), _T("glext.h"), basedir.c_str()))
-				{
-
-				}
-			}
-			else
-			{
-				gLog->PrintF(_T("Copying:"));
-				gLog->IncIndent();
-				gLog->NextLine();
-				gLog->PrintF(_T("\"%s\" -> \"%s\""), gOGLEXTHeaderLocation.c_str(), glextloc.c_str());
-
-				CopyFile(gOGLEXTHeaderLocation.c_str(), glextloc.c_str(), FALSE);
-			}
-
-			gLog->DecIndent();
-
-			gLog->NextLine(1);
+            CopyOrDownload(dl, gOGLKHRPlatformHeaderLocation.c_str(), _T("khrplatform.h"), khrplatformloc.c_str(), khrplatformbasedir.c_str());
 
 			gLog->Flush();
 
