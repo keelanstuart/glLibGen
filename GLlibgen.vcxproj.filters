@@ -65,4 +65,8 @@
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Debug.props" />
+    <None Include="Release.props" />
+  </ItemGroup>
 </Project>
