@@ -1,5 +1,5 @@
 /*
-Copyright ©2016-2017, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
+Copyright ©2016-2020, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement,
 provided that the above copyright notice appears in all copies, modifications, and distributions.
 Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for
@@ -193,11 +193,13 @@ const XMLElement *EvaluatePath(const XMLElement *root, const TCHAR *path)
 tstring gOGLHeaderLocation = _T("gl.h");
 tstring gOGLEXTHeaderLocation = _T("glext.h");
 tstring gOGLKHRPlatformHeaderLocation = _T("khrplatform.h");
+tstring gWGLEXTHeaderLocation = _T("wglext.h");
 tstring gClassName = _T("COpenGL");
 tstring gOutputBaseFileName = _T("gllib");
 tstring gOutputDir = _T(".");
 SVersion gOGLVersionMax(-1, 0);
 bool gAfxInclude = false;
+bool gPchInclude = false;
 bool gOSVIncludes[EOSV_UNKNOWN] = { true, false, false, false, false, false, false, false, false, false, false, false, false };
 
 CGenTextOutput *gLog = nullptr;
@@ -232,7 +234,8 @@ SCmdLineParamData gParams[] =
 	{ _T("glh"),		SCmdLineParamData::CLPT_STRING,		&gOGLHeaderLocation,	        	_T("local or remote (HTTP) file path to \"gl.h\"") },
 	{ _T("glexth"),		SCmdLineParamData::CLPT_STRING,		&gOGLEXTHeaderLocation,		        _T("local or remote (HTTP) file path to \"glext.h\"") },
     { _T("khrh"),		SCmdLineParamData::CLPT_STRING,		&gOGLKHRPlatformHeaderLocation,		_T("local or remote (HTTP) file path to \"khrplatform.h\"") },
-    { _T("class"),		SCmdLineParamData::CLPT_STRING,		&gClassName,			        	_T("name of the class that will be generated") },
+	{ _T("wglexth"),	SCmdLineParamData::CLPT_STRING,		&gWGLEXTHeaderLocation,		        _T("local or remote (HTTP) file path to \"wglext.h\"") },
+	{ _T("class"),		SCmdLineParamData::CLPT_STRING,		&gClassName,			        	_T("name of the class that will be generated") },
 	{ _T("basefile"),	SCmdLineParamData::CLPT_STRING,		&gOutputBaseFileName,	        	_T("base filename that the C++ code will go into (file.cpp and file.h)") },
 	{ _T("outdir"),		SCmdLineParamData::CLPT_STRING,		&gOutputDir,			        	_T("directory where the code will be generated and gl headers copied") },
 	{ _T("ver"),		SCmdLineParamData::CLPT_VERSION,	&gOGLVersionMax,		        	_T("determines the maximum version of OpemGL to support") },
@@ -251,6 +254,7 @@ SCmdLineParamData gParams[] =
 	{ _T("khr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes Khronos extensions") },
 
 	{ _T("afx"),		SCmdLineParamData::CLPT_CMD,	&gAfxInclude,				            _T("adds \"#include <stdafx.h>\"") },
+	{ _T("pch"),		SCmdLineParamData::CLPT_CMD,	&gPchInclude,				            _T("adds \"#include <pch.h>\"") },
 
 	{ nullptr,			SCmdLineParamData::CLPT_NONE,	nullptr,					            nullptr }
 };
@@ -646,6 +650,11 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 	oh.PrintF(_T("#include \"gl.h\"")); oh.NextLine();
 	oh.PrintF(_T("#include \"glext.h\"")); oh.NextLine(1);
+
+	oh.PrintF(_T("#if defined(_MSC_BUILD)")); oh.NextLine();
+	oh.PrintF(_T("#include \"wglext.h\"")); oh.NextLine();
+	oh.PrintF(_T("#endif")); oh.NextLine(1);
+
 	oh.PrintF(_T("class %s"), gClassName.c_str()); oh.NextLine();
 	oh.PrintF(_T("{")); oh.NextLine();
 
@@ -940,6 +949,11 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 		oc.PrintF(_T("#include \"stdafx.h\"")); oc.NextLine();
 	}
 
+	if (gPchInclude)
+	{
+		oc.PrintF(_T("#include \"pch.h\"")); oc.NextLine();
+	}
+
 	TCHAR *fninc = PathFindFileName(out_name_h.c_str());
 	if (fninc)
 	{
@@ -1183,7 +1197,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 		{
 			gLog = new CGenTextOutput(stderr);
 
-			gLog->PrintF(_T("GLlibgen v1.0 - Copyright (c) 2016-2017, Keelan Stuart. All Rights Reserved."));
+			gLog->PrintF(_T("GLlibgen v1.0 - Copyright (c) 2016-2020, Keelan Stuart. All Rights Reserved."));
 			gLog->NextLine(1);
 			gLog->Flush();
 
@@ -1192,16 +1206,6 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			TMapStrStr functype_to_funcname;
 			TMapStrStr define_to_value;
 			TMapStrFuncData funcname_to_funcdata;
-
-			/*
-			gOGLHeaderLocation = _T("gl.h");
-			gOGLEXTHeaderLocation = _T("glext.h");
-			gClassName = _T("COpenGL");
-			gOutputBaseFileName = _T("gllib");
-			gOutputDir = _T(".");
-			gOGLVersionMax = FLT_MAX;
-			gOSVIncludes[EOSV_UNKNOWN] = { true, true, true, false, false, false, false, false, false, false, false };
-			*/
 
 			tstring basedir = gOutputDir;
 			if ((basedir.back() != _T('\\')) && (basedir.back() != _T('/')))
@@ -1212,7 +1216,8 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			tstring glloc = basedir + _T("gl.h");
 			tstring glextloc = basedir + _T("glext.h");
             tstring khrplatformloc = khrplatformbasedir + _T("khrplatform.h");
-            tstring out_name_h = basedir + gOutputBaseFileName + _T(".h");
+			tstring wglextloc = basedir + _T("wglext.h");
+			tstring out_name_h = basedir + gOutputBaseFileName + _T(".h");
 			tstring out_name_cpp = basedir + gOutputBaseFileName + _T(".cpp");
 
 			CHttpDownloader dl;
@@ -1223,6 +1228,8 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
             CopyOrDownload(dl, gOGLKHRPlatformHeaderLocation.c_str(), _T("khrplatform.h"), khrplatformloc.c_str(), khrplatformbasedir.c_str());
 
+			CopyOrDownload(dl, gWGLEXTHeaderLocation.c_str(), _T("wglext.h"), wglextloc.c_str(), basedir.c_str());
+
 			gLog->Flush();
 
 			CCrc32 crc;
@@ -1232,6 +1239,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			crcval = crc.Calculate((const UINT8 *)gClassName.c_str(), sizeof(TCHAR) * gClassName.length(), crcval);
 			crcval = crc.Calculate((const UINT8 *)&gOGLVersionMax, sizeof(SVersion), crcval);
 			crcval = crc.Calculate((const UINT8 *)&gAfxInclude, sizeof(bool), crcval);
+			crcval = crc.Calculate((const UINT8 *)&gPchInclude, sizeof(bool), crcval);
 			crcval = crc.Calculate((const UINT8 *)gOSVIncludes, sizeof(bool) * EOSV_UNKNOWN, crcval);
 
 			// parse out the opengl baseline header
@@ -1240,7 +1248,16 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 				// parse out the opengl extensions header
 				if (ParseFunctionsFromFile(glextloc.c_str(), functype_to_funcname, funcname_to_funcdata, define_to_value, crc, crcval))
 				{
-					WriteCPPWrapper(out_name_h, out_name_cpp, functype_to_funcname, funcname_to_funcdata, define_to_value, crcval);
+					// parse out the wgl extensions header
+					if (ParseFunctionsFromFile(wglextloc.c_str(), functype_to_funcname, funcname_to_funcdata, define_to_value, crc, crcval))
+					{
+						WriteCPPWrapper(out_name_h, out_name_cpp, functype_to_funcname, funcname_to_funcdata, define_to_value, crcval);
+					}
+					else
+					{
+						gLog->PrintF(_T("Failed to open wglext.h!"));
+						gLog->NextLine(1);
+					}
 				}
 				else
 				{

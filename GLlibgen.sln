@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26430.15
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29509.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLlibgen", "GLlibgen.vcxproj", "{136FFCEA-63D5-4756-9B1A-7734745AF3DD}"
 EndProject
@@ -12,40 +12,23 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLlibtest", "GLlibtest\GLli
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug TEMP|Win32 = Debug TEMP|Win32
-		Debug TEMP|x64 = Debug TEMP|x64
-		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
-		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug TEMP|Win32.ActiveCfg = Debug|Win32
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug TEMP|Win32.Build.0 = Debug|Win32
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug TEMP|x64.ActiveCfg = Debug|x64
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug TEMP|x64.Build.0 = Debug|x64
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug|Win32.ActiveCfg = Debug|Win32
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug|Win32.Build.0 = Debug|Win32
 		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug|x64.ActiveCfg = Debug|x64
 		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Debug|x64.Build.0 = Debug|x64
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Release|Win32.ActiveCfg = Release|Win32
-		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Release|Win32.Build.0 = Release|Win32
 		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Release|x64.ActiveCfg = Release|x64
 		{136FFCEA-63D5-4756-9B1A-7734745AF3DD}.Release|x64.Build.0 = Release|x64
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug TEMP|Win32.ActiveCfg = Debug|Win32
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug TEMP|Win32.Build.0 = Debug|Win32
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug TEMP|x64.ActiveCfg = Debug|x64
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug TEMP|x64.Build.0 = Debug|x64
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug|Win32.ActiveCfg = Debug|Win32
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug|Win32.Build.0 = Debug|Win32
 		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug|x64.ActiveCfg = Debug|x64
 		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Debug|x64.Build.0 = Debug|x64
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Release|Win32.ActiveCfg = Release|Win32
-		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Release|Win32.Build.0 = Release|Win32
 		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Release|x64.ActiveCfg = Release|x64
 		{41A6F79E-9930-4322-918E-A9426DE53BA8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {552B68D3-7546-4906-BB20-644DFFA5AB98}
 	EndGlobalSection
 EndGlobal
