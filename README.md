@@ -1,4 +1,4 @@
-#glLibGen - an OpenGL wrapper class code generator for C++
+# glLibGen - an OpenGL wrapper class code generator for C++
 Downloads and parses OpenGL-related headers and extracts as well as online documentation, from which it further extracts function descriptions to be placed in comments. With intellisense, you can scroll through all gl functions, see which version spec they were introduced in, and get a link to the online docs.
 
 glLibGen, Copyright ©2016-2020, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved. Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement, provided that the above copyright notice appears in all copies, modifications, and distributions. Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for any fitness of purpose of this software. All other copyrighted material contained herein is noted and rights attributed to individual copyright holders.
@@ -9,9 +9,9 @@ Note: build Release first... the pre-build step in the glLibTest project uses th
 
 ***
 
-##USAGE: glLibGen64.exe [[-paramname[:]] [-paramname[:]] ...]
+## USAGE: glLibGen64.exe [[-paramname[:]] [-paramname[:]] ...]
 
-###DATA PARAMETERS (you need a ":" after the "-param" on the command line):
+### DATA PARAMETERS (you need a ":" after the "-param" on the command line):
 glh                   ; local or remote (HTTP) file path to "gl.h"
 glexth                ; local or remote (HTTP) file path to "glext.h"
 khrh                  ; local or remote (HTTP) file path to "khrplatform.h"
@@ -21,7 +21,7 @@ basefile              ; base filename that the C++ code will go into (file.cpp a
 outdir                ; directory where the code will be generated and gl headers copied
 ver                   ; determines the maximum version of OpenGL to support
 
-###STAND-ALONE PARAMETERS (just the "-param" by itself):
+### STAND-ALONE PARAMETERS (just the "-param" by itself):
 arb                   ; includes ARB extensions (default on)
 ext                   ; includes EXT extensions
 nv                    ; includes nVidia extensions
@@ -37,7 +37,7 @@ khr                   ; includes Khronos extensions
 afx                   ; adds "#include <stdafx.h>"
 pch                   ; adds "#include <pch.h>"
 
-###EXAMPLES:
+### EXAMPLES:
 ```glLibGen64.exe -ver:4.5 -class:"COpenGL" -basefile:"gl_wrapper" -outdir:"c:\myproj" -glh:"C:\Program Files (x86)\Windows Kits\10\Include\10.0.16299.0\um\gl\GL.h" -glexth:"https://www.khronos.org/registry/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h"```
 Creates gl_wrapper.h and gl_wrapper.cpp in c:\myproj and copies the relevant .h files for OpenGL there, too. COpenGL will include all 4.5 spec functions
 
