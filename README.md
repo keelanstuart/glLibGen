@@ -5,6 +5,7 @@ glLibGen, Copyright ©2016-2020, Keelan Stuart (hereafter referenced as AUTHOR).
 All other copyrighted material contained herein is noted and rights attributed to individual copyright holders.
 
 glLibTest _(part of the main sln)_ uses glLibGen as a pre-build event to generate its OpenGL code. It then uses it to render a very simple scene in an MFC window.
+
 **Warning: it takes quite a while to parse gl.h (et al) and download documentation for each function, subsequently parsing out the parameters, etc... but a CRC-containing comment line is appended to the generated .h file that will keep subsequent re-builds of the wrapper from happening, so unless something changes, you will only have to sit through it one time.***
 
 Note: build Release first... the pre-build step in the glLibTest project uses the non-debug version of glLibGen.
@@ -14,30 +15,52 @@ Note: build Release first... the pre-build step in the glLibTest project uses th
 ## USAGE: glLibGen64.exe [[-paramname[:]] [-paramname[:]] ...]
 
 ### DATA PARAMETERS (you need a ":" after the "-param" on the command line):
-```glh                   ; local or remote (HTTP) file path to "gl.h"```
-```glexth                ; local or remote (HTTP) file path to "glext.h"```
-```khrh                  ; local or remote (HTTP) file path to "khrplatform.h"```
-```wglexth               ; local or remote (HTTP) file path to "wglext.h"```
-```class                 ; name of the class that will be generated```
-```basefile              ; base filename that the C++ code will go into (file.cpp and file.h)```
-```outdir                ; directory where the code will be generated and gl headers copied```
-```ver                   ; determines the maximum version of OpenGL to support```
+> glh                   ; local or remote (HTTP) file path to "gl.h"
+
+> glexth                ; local or remote (HTTP) file path to "glext.h"
+
+> khrh                  ; local or remote (HTTP) file path to "khrplatform.h"
+
+> wglexth               ; local or remote (HTTP) file path to "wglext.h"
+
+> class                 ; name of the class that will be generated
+
+> basefile              ; base filename that the C++ code will go into (file.cpp and file.h)
+
+> outdir                ; directory where the code will be generated and gl headers copied
+
+> ver                   ; determines the maximum version of OpenGL to support
+
 
 ### STAND-ALONE PARAMETERS (just the "-param" by itself):
-```arb                   ; includes ARB extensions (default on)```
-```ext                   ; includes EXT extensions```
-```nv                    ; includes nVidia extensions```
-```amd                   ; includes AMD extensions```
-```ati                   ; includes ATI extensions```
-```intel                 ; includes Intel extensions```
-```sgi                   ; includes Silicon Graphics extensions```
-```sun                   ; includes Sun Microsystems extensions```
-```apple                 ; includes Apple extensions```
-```oes                   ; includes OES extensions```
-```ingr                  ; includes Intergraph extensions```
-```khr                   ; includes Khronos extensions```
-```afx                   ; adds "#include <stdafx.h>"```
-```pch                   ; adds "#include <pch.h>"```
+>arb                   ; includes ARB extensions (default on)
+
+>ext                   ; includes EXT extensions
+
+>nv                    ; includes nVidia extensions
+
+>amd                   ; includes AMD extensions
+
+>ati                   ; includes ATI extensions
+
+>intel                 ; includes Intel extensions
+
+>sgi                   ; includes Silicon Graphics extensions
+
+>sun                   ; includes Sun Microsystems extensions
+
+>apple                 ; includes Apple extensions
+
+>oes                   ; includes OES extensions
+
+>ingr                  ; includes Intergraph extensions
+
+>khr                   ; includes Khronos extensions
+
+>afx                   ; adds "#include <stdafx.h>"
+
+>pch                   ; adds "#include <pch.h>"
+
 
 ***
 
