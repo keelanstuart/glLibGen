@@ -12,34 +12,37 @@ Note: build Release first... the pre-build step in the glLibTest project uses th
 ## USAGE: glLibGen64.exe [[-paramname[:]] [-paramname[:]] ...]
 
 ### DATA PARAMETERS (you need a ":" after the "-param" on the command line):
-glh                   ; local or remote (HTTP) file path to "gl.h"
-glexth                ; local or remote (HTTP) file path to "glext.h"
-khrh                  ; local or remote (HTTP) file path to "khrplatform.h"
-wglexth               ; local or remote (HTTP) file path to "wglext.h"
-class                 ; name of the class that will be generated
-basefile              ; base filename that the C++ code will go into (file.cpp and file.h)
-outdir                ; directory where the code will be generated and gl headers copied
-ver                   ; determines the maximum version of OpenGL to support
+> glh                   ; local or remote (HTTP) file path to "gl.h"
+> glexth                ; local or remote (HTTP) file path to "glext.h"
+> khrh                  ; local or remote (HTTP) file path to "khrplatform.h"
+> wglexth               ; local or remote (HTTP) file path to "wglext.h"
+> class                 ; name of the class that will be generated
+> basefile              ; base filename that the C++ code will go into (file.cpp and file.h)
+> outdir                ; directory where the code will be generated and gl headers copied
+> ver                   ; determines the maximum version of OpenGL to support
 
 ### STAND-ALONE PARAMETERS (just the "-param" by itself):
-arb                   ; includes ARB extensions (default on)
-ext                   ; includes EXT extensions
-nv                    ; includes nVidia extensions
-amd                   ; includes AMD extensions
-ati                   ; includes ATI extensions
-intel                 ; includes Intel extensions
-sgi                   ; includes Silicon Graphics extensions
-sun                   ; includes Sun Microsystems extensions
-apple                 ; includes Apple extensions
-oes                   ; includes OES extensions
-ingr                  ; includes Intergraph extensions
-khr                   ; includes Khronos extensions
-afx                   ; adds "#include <stdafx.h>"
-pch                   ; adds "#include <pch.h>"
+> arb                   ; includes ARB extensions (default on)
+> ext                   ; includes EXT extensions
+> nv                    ; includes nVidia extensions
+> amd                   ; includes AMD extensions
+> ati                   ; includes ATI extensions
+> intel                 ; includes Intel extensions
+> sgi                   ; includes Silicon Graphics extensions
+> sun                   ; includes Sun Microsystems extensions
+> apple                 ; includes Apple extensions
+> oes                   ; includes OES extensions
+> ingr                  ; includes Intergraph extensions
+> khr                   ; includes Khronos extensions
+> afx                   ; adds "#include <stdafx.h>"
+> pch                   ; adds "#include <pch.h>"
+
+***
 
 ### EXAMPLES:
+
 ```glLibGen64.exe -ver:4.5 -class:"COpenGL" -basefile:"gl_wrapper" -outdir:"c:\myproj" -glh:"C:\Program Files (x86)\Windows Kits\10\Include\10.0.16299.0\um\gl\GL.h" -glexth:"https://www.khronos.org/registry/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h"```
-Creates gl_wrapper.h and gl_wrapper.cpp in c:\myproj and copies the relevant .h files for OpenGL there, too. COpenGL will include all 4.5 spec functions
+_Creates gl_wrapper.h and gl_wrapper.cpp in c:\myproj and copies the relevant .h files for OpenGL there, too. COpenGL will include all 4.5 spec functions_
 
 ```glLibGen64.exe -ver:3.2 -khr -pch -class:"Cogl" -basefile:"Cogl" -outdir:"d:\somewhere" -glh:"C:\Program Files (x86)\Windows Kits\10\Include\10.0.16299.0\um\gl\GL.h" -glexth:"https://www.khronos.org/registry/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h"```
-Creates Cogl.h and Cogl.cpp in d:\somewhere and copies the relevant .h files for OpenGL there, too. COpenGL will include all 3.2 spec functions, as well as all specifically-marked KHRONOS extensions. Will include <pch.h> at the top
+_Creates Cogl.h and Cogl.cpp in d:\somewhere and copies the relevant .h files for OpenGL there, too. COpenGL will include all 3.2 spec functions, as well as all specifically-marked KHRONOS extensions. Will include <pch.h> at the top>
