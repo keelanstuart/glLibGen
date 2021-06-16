@@ -677,17 +677,17 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	gLog->NextLine();
 
 	// write out all the wrapper functions
-	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
+	for (const auto &cit : funcname_to_funcdata)
 	{
         // is this extension's vendor allowed?
-		if (!gOSVIncludes[cit->second.osv])
+		if (!gOSVIncludes[cit.second.osv])
 			continue;
 
 		// is this extension's version is higher than what we're allowed?
-		if (cit->second.ver.major <= gOGLVersionMax.major)
+		if (cit.second.ver.major <= gOGLVersionMax.major)
 		{
 			// the major version was ok... minor, too?
-			if (cit->second.ver.minor > gOGLVersionMax.minor)
+			if (cit.second.ver.minor > gOGLVersionMax.minor)
 				continue;
 		}
 		else
@@ -695,12 +695,12 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 		gLog->Flush();
 
-		gLog->PrintF(_T("%s"), cit->first.c_str());
+		gLog->PrintF(_T("%s"), cit.first.c_str());
 
 		oh.NextLine();
 
-		tstring nfn = cit->first.c_str() + 2;	//skip over the "gl" beginning
-		tstring desctext = cit->first.c_str();
+		tstring nfn = cit.first.c_str() + 2;	//skip over the "gl" beginning
+		tstring desctext = cit.first.c_str();
 
 		UINT dli = 0;
 		bool gotdoc = false;
@@ -710,7 +710,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 		while (docdata[dli].baseurl != nullptr)
 		{
 			doclink = docdata[dli].baseurl;
-			doclink += cit->first.c_str();
+			doclink += cit.first.c_str();
 			doclink += docdata[dli].ext;
 
 			doclocal = _T("gllibgen_doctemp");
@@ -796,7 +796,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 							{
 								gLog->PrintF(_T("."));
 
-								s = _tcsstr(s, cit->first.c_str());
+								s = _tcsstr(s, cit.first.c_str());
 								if (s)
 								{
 									gLog->PrintF(_T("."));
@@ -834,9 +834,9 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 		gLog->PrintF(_T("."));
 
-		oh.NextLine(); oh.PrintF(_T("/* [%d.%d] %s%s%s%s */"), cit->second.ver.major, cit->second.ver.minor, desctext.c_str() + 2, doclink.empty() ? _T("") : _T(" ("), doclink.c_str(), doclink.empty() ? _T("") : _T(")"));
+		oh.NextLine(); oh.PrintF(_T("/* [%d.%d] %s%s%s%s */"), cit.second.ver.major, cit.second.ver.minor, desctext.c_str() + 2, doclink.empty() ? _T("") : _T(" ("), doclink.c_str(), doclink.empty() ? _T("") : _T(")"));
 
-		oh.NextLine(); oh.PrintF(_T("%s %s%s;"), cit->second.ret.c_str(), nfn.c_str(), cit->second.params.c_str());
+		oh.NextLine(); oh.PrintF(_T("%s %s%s;"), cit.second.ret.c_str(), nfn.c_str(), cit.second.params.c_str());
 
 		gLog->NextLine();
 	}
@@ -851,20 +851,20 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	gLog->NextLine(1);
 
 	bool wrote_functype = false;
-	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
+	for (const auto &cit : funcname_to_funcdata)
 	{
-        if (!cit->second.needsfunctype)
+        if (!cit.second.needsfunctype)
 			continue;
 
         // is this extension's vendor allowed?
-        if (!gOSVIncludes[cit->second.osv])
+        if (!gOSVIncludes[cit.second.osv])
             continue;
 
         // is this extension's version is higher than what we're allowed?
-        if (cit->second.ver.major <= gOGLVersionMax.major)
+        if (cit.second.ver.major <= gOGLVersionMax.major)
         {
             // the major version was ok... minor, too?
-            if (cit->second.ver.minor > gOGLVersionMax.minor)
+            if (cit.second.ver.minor > gOGLVersionMax.minor)
                 continue;
         }
         else
@@ -876,11 +876,11 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 		oh.NextLine();
 
-		tstring nfn = cit->first.c_str();	//skip over the "gl" beginning
+		tstring nfn = cit.first.c_str();	//skip over the "gl" beginning
 		std::transform(nfn.begin(), nfn.end(), nfn.begin(), _totupper);
 		nfn = _T("PFN") + nfn + _T("PROC");
 
-		oh.PrintF(_T("typedef %s (APIENTRY *%s) %s;"), cit->second.ret.c_str(), nfn.c_str(), cit->second.params.c_str());
+		oh.PrintF(_T("typedef %s (APIENTRY *%s) %s;"), cit.second.ret.c_str(), nfn.c_str(), cit.second.params.c_str());
 	}
 
 	if (wrote_functype)
@@ -893,9 +893,9 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	gLog->NextLine(1);
 
 	// write out all the function pointer member variables
-	for (TMapStrStr::const_iterator cit = functype_to_funcname.begin(); cit != functype_to_funcname.end(); cit++)
+	for (const auto &cit : functype_to_funcname)
 	{
-        TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
+        const auto &fnit = funcname_to_funcdata.find(cit.second);
 		if ((fnit == funcname_to_funcdata.end()))
 			continue;
 
@@ -913,10 +913,10 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
         else
             continue;
 
-        if (!cit->second.empty())
+        if (!cit.second.empty())
 		{
 			oh.NextLine();
-			oh.PrintF(_T("%s _%s;"), cit->first.c_str(), cit->second.c_str());
+			oh.PrintF(_T("%s _%s;"), cit.first.c_str(), cit.second.c_str());
 		}
 	}
 
@@ -1001,9 +1001,9 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	oc.PrintF(_T("{")); oc.IncIndent();
 
 	// write out all the function pointer member variables
-	for (TMapStrStr::const_iterator cit = functype_to_funcname.begin(); cit != functype_to_funcname.end(); cit++)
+	for (const auto &cit : functype_to_funcname)
 	{
-        TMapStrFuncData::const_iterator fnit = funcname_to_funcdata.find(cit->second);
+        const auto &fnit = funcname_to_funcdata.find(cit.second);
 		if ((fnit == funcname_to_funcdata.end()))
 			continue;
 
@@ -1021,10 +1021,10 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
         else
             continue;
 
-		if (!cit->second.empty())
+		if (!cit.second.empty())
 		{
 			oc.NextLine();
-			oc.PrintF(_T("_%s = (%s)GetAnyGLFuncAddress(_T(\"%s\"));"), cit->second.c_str(), cit->first.c_str(), cit->second.c_str());
+			oc.PrintF(_T("_%s = (%s)GetAnyGLFuncAddress(_T(\"%s\"));"), cit.second.c_str(), cit.first.c_str(), cit.second.c_str());
 		}
 	}
 
@@ -1033,44 +1033,44 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	oc.DecIndent(); oc.NextLine();
 	oc.PrintF(_T("}")); oc.NextLine(2);
 
-	for (TMapStrFuncData::const_iterator cit = funcname_to_funcdata.begin(); cit != funcname_to_funcdata.end(); cit++)
+	for (const auto &cit : funcname_to_funcdata)
 	{
         // is this extension's vendor allowed?
-        if (!gOSVIncludes[cit->second.osv])
+        if (!gOSVIncludes[cit.second.osv])
             continue;
 
         // is this extension's version is higher than what we're allowed?
-        if (cit->second.ver.major <= gOGLVersionMax.major)
+        if (cit.second.ver.major <= gOGLVersionMax.major)
         {
             // the major version was ok... minor, too?
-            if (cit->second.ver.minor > gOGLVersionMax.minor)
+            if (cit.second.ver.minor > gOGLVersionMax.minor)
                 continue;
         }
         else
             continue;
 
         bool needsret = false;
-		if (_tcscmp(cit->second.ret.c_str(), _T("void")))
+		if (_tcscmp(cit.second.ret.c_str(), _T("void")))
 			needsret = true;
 
-		tstring nfn = cit->first.c_str() + 2;	//skip over the "gl" beginning
-		oc.PrintF(_T("%s %s::%s%s"), cit->second.ret.c_str(), gClassName.c_str(), nfn.c_str(), cit->second.params.c_str()); oc.NextLine();
+		tstring nfn = cit.first.c_str() + 2;	//skip over the "gl" beginning
+		oc.PrintF(_T("%s %s::%s%s"), cit.second.ret.c_str(), gClassName.c_str(), nfn.c_str(), cit.second.params.c_str()); oc.NextLine();
 		oc.PrintF(_T("{")); oc.IncIndent(); oc.NextLine();
 
 		if (needsret)
 		{
-			oc.PrintF(_T("%s ret = 0;"), cit->second.ret.c_str()); oc.NextLine(1);
+			oc.PrintF(_T("%s ret = 0;"), cit.second.ret.c_str()); oc.NextLine(1);
 		}
 
-		oc.PrintF(_T("if (_%s != nullptr)"), cit->first.c_str()); oc.IncIndent(); oc.NextLine();
+		oc.PrintF(_T("if (_%s != nullptr)"), cit.first.c_str()); oc.IncIndent(); oc.NextLine();
 		if (needsret)
 			oc.PrintF(_T("ret = "));
 
-		oc.PrintF(_T("_%s("), cit->first.c_str());
+		oc.PrintF(_T("_%s("), cit.first.c_str());
 
 		// make a call to the function pointer that we're wrapping... so parse out the parameters
 		CGenParser pp;
-		pp.SetSourceData(cit->second.params.c_str(), cit->second.params.length());
+		pp.SetSourceData(cit.second.params.c_str(), cit.second.params.length());
 
 		// skip the '('
 		pp.NextToken();
@@ -1123,7 +1123,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 			oc.PrintF(_T("%s "), pp.GetCurrentTokenString());
 		}
 
-		oc.PrintF(_T(");"), cit->first.c_str()); oc.DecIndent();
+		oc.PrintF(_T(");"), cit.first.c_str()); oc.DecIndent();
 
 		if (needsret)
 		{
