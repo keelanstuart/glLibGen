@@ -1,5 +1,5 @@
 /*
-Copyright ©2016-2017, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
+Copyright ©2016-2021, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement,
 provided that the above copyright notice appears in all copies, modifications, and distributions.
 Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for
@@ -59,7 +59,7 @@ All other copyrighted material contained herein is noted and rights attributed t
 
 
 UINT CHttpDownloader::sCommFailures = 0;
-
+static UINT s_InstCount = 0;
 
 CHttpDownloader::CHttpDownloader()
 {
@@ -68,8 +68,11 @@ CHttpDownloader::CHttpDownloader()
 	m_hUrl = NULL;
 	m_SemReqComplete = CreateSemaphore(NULL, 1, 1, NULL);
 
+	TCHAR iname[64];
+	_stprintf_s(iname, _T("FileDownload%d"), s_InstCount);
 	// Create our internet handle
-	m_hInet = InternetOpen(_T("File Download"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, INTERNET_FLAG_ASYNC);
+	m_hInet = InternetOpen(iname, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, INTERNET_FLAG_ASYNC);
+	s_InstCount++;
 
 	InternetSetStatusCallback(m_hInet, (INTERNET_STATUS_CALLBACK)DownloadStatusCallback);
 #else
@@ -102,6 +105,7 @@ CHttpDownloader::~CHttpDownloader()
 		curl_easy_cleanup(m_pCURL);
 	}
 #endif
+	s_InstCount--;
 }
 
 bool CreateDirectories(const TCHAR *dir)
@@ -497,7 +501,7 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 // This is called by wininet during asynchronous operations
 void CALLBACK CHttpDownloader::DownloadStatusCallback(HINTERNET hinet, DWORD_PTR context, DWORD inetstat, LPVOID statinfo, DWORD statinfolen)
 {
-	Sleep(20);
+	Sleep(1);
 
 	// The context should be this
 	CHttpDownloader *_this = (CHttpDownloader *)context;

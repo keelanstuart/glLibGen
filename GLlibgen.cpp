@@ -1,5 +1,5 @@
 /*
-Copyright ©2016-2020, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
+Copyright ©2016-2021, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement,
 provided that the above copyright notice appears in all copies, modifications, and distributions.
 Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for
@@ -16,6 +16,7 @@ All other copyrighted material contained herein is noted and rights attributed t
 #include "HttpDownload.h"
 #include <tinyxml2.h>
 #include "GenCRC.h"
+#include <Pool/Include/Pool.h>
 
 typedef struct sDocLinkData
 {
@@ -26,10 +27,10 @@ typedef struct sDocLinkData
 
 const SDocLinkData docdata[] =
 {
-	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
-	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
 	{ _T("https://www.opengl.org/sdk/docs/man/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
 	{ _T("https://www.opengl.org/sdk/docs/man2/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
+	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
+	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
 
 	// keep this here so we know when to stop checking new URLs
 	{ nullptr, nullptr, nullptr }
@@ -51,6 +52,9 @@ typedef enum eExtensionOSV
 	EOSV_OES,
 	EOSV_INGR,
 	EOSV_KHR,
+	EOSV_HP,
+	EOSV_IBM,
+	EOSV_GREMEDY,
 
 	EOSV_UNKNOWN
 
@@ -72,6 +76,9 @@ TCHAR *OSVName[EOSV_UNKNOWN] =
 	_T("GL_OES"),
 	_T("GL_INGR"),
 	_T("GL_KHR"),
+	_T("GL_HP"),
+	_T("GL_IBM"),
+	_T("GL_GREMEDY"),
 };
 
 typedef struct sVersion
@@ -91,6 +98,8 @@ typedef struct sFunctionData
 	bool needsfunctype;
 	EExtensionOSV osv;
 	SVersion ver;
+	tstring desc;
+	tstring doclink;
 } SFunctionData;
 
 typedef std::map<tstring, tstring> TMapStrStr;
@@ -200,7 +209,9 @@ tstring gOutputDir = _T(".");
 SVersion gOGLVersionMax(-1, 0);
 bool gAfxInclude = false;
 bool gPchInclude = false;
-bool gOSVIncludes[EOSV_UNKNOWN] = { true, false, false, false, false, false, false, false, false, false, false, false, false };
+bool gOSVIncludes[EOSV_UNKNOWN] = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+bool gProvideLogCallback = false;
+bool gPullDocs = false;
 
 CGenTextOutput *gLog = nullptr;
 
@@ -239,6 +250,7 @@ SCmdLineParamData gParams[] =
 	{ _T("basefile"),	SCmdLineParamData::CLPT_STRING,		&gOutputBaseFileName,	        	_T("base filename that the C++ code will go into (file.cpp and file.h)") },
 	{ _T("outdir"),		SCmdLineParamData::CLPT_STRING,		&gOutputDir,			        	_T("directory where the code will be generated and gl headers copied") },
 	{ _T("ver"),		SCmdLineParamData::CLPT_VERSION,	&gOGLVersionMax,		        	_T("determines the maximum version of OpemGL to support") },
+	{ _T("docs"),		SCmdLineParamData::CLPT_CMD,		&gPullDocs,				            _T("downloads and includes the documentation") },
 
 	{ _T("arb"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_ARB],	            _T("includes ARB extensions") },
 	{ _T("ext"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_EXT],	            _T("includes EXT extensions") },
@@ -250,11 +262,16 @@ SCmdLineParamData gParams[] =
 	{ _T("sun"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_SUN],	            _T("includes Sun Microsystems extensions") },
 	{ _T("apple"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_APPLE],	            _T("includes Apple extensions") },
 	{ _T("oes"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes OES extensions") },
-	{ _T("ingr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes Intergraph extensions") },
-	{ _T("khr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_OES],	            _T("includes Khronos extensions") },
+	{ _T("ingr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_INGR],	            _T("includes Intergraph extensions") },
+	{ _T("khr"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_KHR],	            _T("includes Khronos extensions") },
+	{ _T("hp"),			SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_HP],		            _T("includes Hewlett-Packard extensions") },
+	{ _T("ibm"),		SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_IBM],	            _T("includes IBM extensions") },
+	{ _T("gremedy"),	SCmdLineParamData::CLPT_CMD,	&gOSVIncludes[EOSV_GREMEDY],	        _T("includes GRemedy extensions") },
 
 	{ _T("afx"),		SCmdLineParamData::CLPT_CMD,	&gAfxInclude,				            _T("adds \"#include <stdafx.h>\"") },
 	{ _T("pch"),		SCmdLineParamData::CLPT_CMD,	&gPchInclude,				            _T("adds \"#include <pch.h>\"") },
+
+	{ _T("logcb"),		SCmdLineParamData::CLPT_CMD,	&gProvideLogCallback,		            _T("adds a mechanism to report the OpenGL calls made") },
 
 	{ nullptr,			SCmdLineParamData::CLPT_NONE,	nullptr,					            nullptr }
 };
@@ -560,6 +577,214 @@ bool ParseFunctionsFromFile(const TCHAR *filename, TMapStrStr &functype_to_funcn
 	return ret;
 }
 
+bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
+{
+	gLog->PrintF(_T("Beginning auto-documentation process (%d functions)"), funcname_to_funcdata.size());
+
+	pool::IThreadPool *ptp = pool::IThreadPool::Create(1, 0);
+
+	for (TMapStrFuncData::iterator it = funcname_to_funcdata.begin(); it != funcname_to_funcdata.end(); it++)
+	{
+		// is this extension's vendor allowed?
+		if (!gOSVIncludes[it->second.osv])
+			continue;
+
+		// is this extension's version is higher than what we're allowed?
+		if (it->second.ver.major <= gOGLVersionMax.major)
+		{
+			// the major version was ok... minor, too?
+			if (it->second.ver.minor > gOGLVersionMax.minor)
+				continue;
+		}
+		else
+			continue;
+
+		SFunctionData *funcdata = &(it->second);
+		const TCHAR *funcname = it->first.c_str();
+
+		ptp->RunTask([](void *param0, void *param1, size_t task_number) -> pool::IThreadPool::TASK_RETURN
+		{
+			const TCHAR *funcname = (const TCHAR *)param0;
+			SFunctionData *funcdata = (SFunctionData *)param1;
+
+			tstring desctext = funcname;
+
+			UINT dli = 0;
+			bool gotdoc = false;
+			tstring doclink;
+			tstring doclocal;
+
+			while (docdata[dli].baseurl != nullptr)
+			{
+				doclink = docdata[dli].baseurl;
+				doclink += funcname;
+				doclink += docdata[dli].ext;
+
+				doclocal = _T("gllibgen_doctemp");
+				doclocal += funcname;
+				doclocal += docdata[dli].ext;
+
+				gLog->PrintF(_T("."));
+
+				CHttpDownloader taskdl;
+				gotdoc = taskdl.DownloadHttpFile(doclink.c_str(), doclocal.c_str(), _T("."));
+				if (gotdoc)
+				{
+					char buf[2049];
+					FILE *tmpf = nullptr;
+
+					// khronos returns a page that says 404, but doesn't indicate that in the html response... boooo...
+					// so look for their string in the returned data.
+					if ((_tfopen_s(&tmpf, doclocal.c_str(), _T("rb")) != EINVAL) && tmpf)
+					{
+						size_t tmpbuflen = fread(buf, sizeof(char), 2048, tmpf);
+						buf[tmpbuflen] = 0;
+						if (strstr(buf, "404… Oops"))
+							gotdoc = false;
+
+						fclose(tmpf);
+					}
+
+					if (gotdoc)
+						break;
+				}
+
+				dli++;
+			}
+
+			if (gotdoc)
+			{
+				FILE *in_file_doc = nullptr;
+
+				if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt")) != EINVAL) && in_file_doc)
+				{
+					tinyxml2::XMLDocument doc;
+					if (tinyxml2::XML_SUCCESS == doc.LoadFile(in_file_doc))
+					{
+						const tinyxml2::XMLElement *root = doc.RootElement();
+
+						const tinyxml2::XMLElement *desc = EvaluatePath(root, docdata[dli].descpath);
+						if (desc)
+						{
+#if defined(UNICODE)
+							int len = MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, NULL, NULL);
+							if (len)
+							{
+								desctext.resize(len + 1);
+								MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, (TCHAR *)(desctext.c_str()), sizeof(TCHAR) * (len + 1));
+								gLog->PrintF(_T("o"));
+
+							}
+#else
+							desctext = desc->GetText();
+#endif
+						}
+					}
+					else
+					{
+						fclose(in_file_doc);
+						in_file_doc = nullptr;
+
+						if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt, ccs=UTF-8")) != EINVAL) && in_file_doc)
+						{
+							_fseeki64(in_file_doc, 0, SEEK_END);
+							size_t in_size = (size_t)_ftelli64(in_file_doc);
+							_fseeki64(in_file_doc, 0, SEEK_SET);
+
+							TCHAR *buf = (in_size > 0) ? (TCHAR *)malloc(sizeof(TCHAR) * in_size) : nullptr;
+							if (buf)
+							{
+								fread_s(buf, sizeof(TCHAR) * in_size, sizeof(TCHAR), in_size, in_file_doc);
+
+								TCHAR *s = _tcsstr(buf, _T("refnamediv"));
+								if (s)
+								{
+									s = _tcsstr(s, funcname);
+									if (s)
+									{
+										//gLog->PrintF(_T("."));
+
+										TCHAR *e = _tcsstr(s, _T("</p>"));
+										if (e)
+										{
+											*e = _T('\0');
+											gLog->PrintF(_T("o"));
+											desctext = s;
+										}
+									}
+								}
+
+								free(buf);
+							}
+						}
+					}
+
+					if (in_file_doc)
+						fclose(in_file_doc);
+				}
+
+				DeleteFile(doclocal.c_str());
+			}
+			else
+			{
+				doclink.clear();
+			}
+
+			size_t invchr = desctext.find_first_of(_T('—'));
+			if (invchr < desctext.length())
+				desctext[invchr] = _T('-');
+
+			//gLog->PrintF(_T("."));
+			funcdata->desc = desctext;
+			funcdata->doclink = doclink;
+
+			return pool::IThreadPool::TASK_RETURN::TR_OK;
+
+		}, (void *)funcname, (void *)funcdata);
+	}
+
+	ptp->Flush();
+	ptp->Release();
+	gLog->NextLine();
+	gLog->PrintF(_T("Done."));
+	gLog->NextLine(1);
+
+	return true;
+}
+
+void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR *paramname, tstring & str, tstring & arg)
+{
+	if (!_tcsicmp(paramtype, _T("GLchar")) && ptr)
+	{
+		str += _T("%s");
+		arg += paramname;
+	}
+	else if (!_tcsicmp(paramtype, _T("GLenum")) || ptr)
+	{
+		str += _T("0x%X");
+		arg += paramname;
+	}
+	else if (!_tcsicmp(paramtype, _T("GLboolean")))
+	{
+		str += _T("%s");
+		arg += paramname;
+		arg += _T(" ? _T(\"true\") : _T(\"false\")");
+	}
+	else if ((!_tcsicmp(paramtype, _T("GLfloat"))) ||
+		(!_tcsicmp(paramtype, _T("GLclampf"))) ||
+		(!_tcsicmp(paramtype, _T("GLfloat"))) ||
+		(!_tcsicmp(paramtype, _T("GLclampd"))))
+	{
+		str += _T("%f");
+		arg += paramname;
+	}
+	else
+	{
+		str += _T("%d");
+		arg += paramname;
+	}
+}
+
 #define CRCBUFSZ	16
 
 bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &functype_to_funcname, TMapStrFuncData &funcname_to_funcdata, TMapStrStr &define_to_value, UINT32 crcval)
@@ -672,7 +897,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 	CHttpDownloader docdl;
 
-	gLog->PrintF(_T("- Member Functions (may take a long time to process docs)"));
+	gLog->PrintF(_T("- Member Functions"));
 	gLog->IncIndent();
 	gLog->NextLine();
 
@@ -700,141 +925,9 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 		oh.NextLine();
 
 		tstring nfn = cit.first.c_str() + 2;	//skip over the "gl" beginning
-		tstring desctext = cit.first.c_str();
 
-		UINT dli = 0;
-		bool gotdoc = false;
-		tstring doclink;
-		tstring doclocal;
-
-		while (docdata[dli].baseurl != nullptr)
-		{
-			doclink = docdata[dli].baseurl;
-			doclink += cit.first.c_str();
-			doclink += docdata[dli].ext;
-
-			doclocal = _T("gllibgen_doctemp");
-			doclocal += docdata[dli].ext;
-
-			gLog->PrintF(_T("."));
-
-			gotdoc = docdl.DownloadHttpFile(doclink.c_str(), doclocal.c_str(), _T("."));
-            if (gotdoc)
-            {
-                char buf[2049];
-                FILE *tmpf = nullptr;
-
-                // khronos returns a page that says 404, but doesn't indicate that in the html response... boooo...
-                // so look for their string in the returned data.
-                if ((_tfopen_s(&tmpf, doclocal.c_str(), _T("rb")) != EINVAL) && tmpf)
-                {
-                    size_t tmpbuflen = fread(buf, sizeof(char), 2048, tmpf);
-                    buf[tmpbuflen] = 0;
-                    if (strstr(buf, "404… Oops"))
-                        gotdoc = false;
-
-                    fclose(tmpf);
-                }
-
-                if (gotdoc)
-                    break;
-            }
-
-			dli++;
-		}
-
-		if (gotdoc)
-		{
-			FILE *in_file_doc = nullptr;
-
-			if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt")) != EINVAL) && in_file_doc)
-			{
-				gLog->PrintF(_T("."));
-
-				tinyxml2::XMLDocument doc;
-				if (tinyxml2::XML_SUCCESS == doc.LoadFile(in_file_doc))
-				{
-					const tinyxml2::XMLElement *root = doc.RootElement();
-
-					const tinyxml2::XMLElement *desc = EvaluatePath(root, docdata[dli].descpath);
-					if (desc)
-					{
-#if defined(UNICODE)
-						int len = MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, NULL, NULL);
-						if (len)
-						{
-							desctext.resize(len + 1);
-							MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, (TCHAR *)(desctext.c_str()), sizeof(TCHAR) * (len + 1));
-						}
-#else
-						desctext = desc->GetText();
-#endif
-					}
-				}
-				else
-				{
-					fclose(in_file_doc);
-					in_file_doc = nullptr;
-
-					if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt, ccs=UTF-8")) != EINVAL) && in_file_doc)
-					{
-						gLog->PrintF(_T("."));
-
-						_fseeki64(in_file_doc, 0, SEEK_END);
-						size_t in_size = (size_t)_ftelli64(in_file_doc);
-						_fseeki64(in_file_doc, 0, SEEK_SET);
-
-						TCHAR *buf = (in_size > 0) ? (TCHAR *)malloc(sizeof(TCHAR) * in_size) : nullptr;
-						if (buf)
-						{
-							fread_s(buf, sizeof(TCHAR) * in_size, sizeof(TCHAR), in_size, in_file_doc);
-
-							gLog->PrintF(_T("."));
-
-							TCHAR *s = _tcsstr(buf, _T("refnamediv"));
-							if (s)
-							{
-								gLog->PrintF(_T("."));
-
-								s = _tcsstr(s, cit.first.c_str());
-								if (s)
-								{
-									gLog->PrintF(_T("."));
-
-									TCHAR *e = _tcsstr(s, _T("</p>"));
-									if (e)
-									{
-										gLog->PrintF(_T("."));
-
-										*e = _T('\0');
-										desctext = s;
-									}
-								}
-							}
-
-							free(buf);
-						}
-					}
-				}
-
-				if (in_file_doc)
-					fclose(in_file_doc);
-			}
-
-			DeleteFile(doclocal.c_str());
-		}
-		else
-		{
-			doclink.clear();
-		}
-
-		size_t invchr = desctext.find_first_of(_T('—'));
-		if (invchr < desctext.length())
-			desctext[invchr] = _T('-');
-
-		gLog->PrintF(_T("."));
-
-		oh.NextLine(); oh.PrintF(_T("/* [%d.%d] %s%s%s%s */"), cit.second.ver.major, cit.second.ver.minor, desctext.c_str() + 2, doclink.empty() ? _T("") : _T(" ("), doclink.c_str(), doclink.empty() ? _T("") : _T(")"));
+		oh.NextLine(); oh.PrintF(_T("/* [OpenGL %d.%d] %s%s%s%s*/"), cit.second.ver.major, cit.second.ver.minor, cit.second.desc.c_str() + 2,
+			cit.second.doclink.empty() ? _T(" ") : _T(" ("), cit.second.doclink.c_str(), cit.second.doclink.empty() ? _T("") : _T(") "));
 
 		oh.NextLine(); oh.PrintF(_T("%s %s%s;"), cit.second.ret.c_str(), nfn.c_str(), cit.second.params.c_str());
 
@@ -1033,6 +1126,10 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	oc.DecIndent(); oc.NextLine();
 	oc.PrintF(_T("}")); oc.NextLine(2);
 
+	tstring cbcode_str, cbcode_args;
+	cbcode_str.reserve(4096);
+	cbcode_args.reserve(4096);
+
 	for (const auto &cit : funcname_to_funcdata)
 	{
         // is this extension's vendor allowed?
@@ -1059,7 +1156,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 		if (needsret)
 		{
-			oc.PrintF(_T("%s ret = 0;"), cit.second.ret.c_str()); oc.NextLine(1);
+			oc.PrintF(_T("%s ret = { 0 };"), cit.second.ret.c_str()); oc.NextLine(1);
 		}
 
 		oc.PrintF(_T("if (_%s != nullptr)"), cit.first.c_str()); oc.IncIndent(); oc.NextLine();
@@ -1075,34 +1172,72 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 		// skip the '('
 		pp.NextToken();
 
+		cbcode_str.clear();
+		cbcode_args.clear();
+
+		cbcode_str += nfn.c_str();
+		cbcode_str += _T("(");
+		size_t argnum = 0;
+
 		while (pp.NextToken())
 		{
+			bool ptr = false;
+			bool ref = false;
+
 			while (pp.IsToken(_T("const")) || pp.IsToken(_T("struct")))
 				pp.NextToken();
 
 			// should be the parameter type
+			tstring pt = pp.GetCurrentTokenString();
 
 			if (pp.IsToken(_T(")")))
 				break;
 			pp.NextToken();
 
 			// skip pointer and reference indicators
-			if (pp.IsToken(_T("*")) || pp.IsToken(_T("&")))
+			if (pp.IsToken(_T("*")))
+			{
 				pp.NextToken();
+				ptr = true;
+			}
+
+			if (pp.IsToken(_T("&")))
+			{
+				pp.NextToken();
+				ref = true;
+			}
 
 			if (pp.IsToken(_T("const")))
 				pp.NextToken();
 
-			if (pp.IsToken(_T("*")) || pp.IsToken(_T("&")))
+			if (pp.IsToken(_T("*")))
+			{
 				pp.NextToken();
+				ptr = true;
+			}
+
+			if (pp.IsToken(_T("&")))
+			{
+				pp.NextToken();
+				ref = true;
+			}
 
 			if (pp.IsToken(_T(")")))
 				break;
 
-			tstring pt = pp.GetCurrentTokenString();
+			// should be the parameter name
+			tstring pn = pp.GetCurrentTokenString();
+
+			if (argnum > 0)
+			{
+				cbcode_str += _T(", ");
+				cbcode_args += _T(", ");
+			}
+
+			AppendLogComponentsFromType(pt.c_str(), ptr, pn.c_str(), cbcode_str, cbcode_args);
 
 			// should be the parameter name
-			oc.PrintF(_T("%s"), pt.c_str());
+			oc.PrintF(_T("%s"), pn.c_str());
 
 			pp.NextToken();
 
@@ -1121,9 +1256,28 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 				break;
 
 			oc.PrintF(_T("%s "), pp.GetCurrentTokenString());
+
+			argnum++;
 		}
 
 		oc.PrintF(_T(");"), cit.first.c_str()); oc.DecIndent();
+		cbcode_str += _T(")");
+		if (needsret)
+		{
+			cbcode_str += _T(" => ");
+			if (!cbcode_args.empty())
+				cbcode_args += _T(", ");
+			AppendLogComponentsFromType(cit.second.ret.c_str(), (cit.second.ret.find('*') == tstring::npos) ? false : true, _T("ret"), cbcode_str, cbcode_args);
+		}
+
+
+		if (gProvideLogCallback)
+		{
+			oc.NextLine(1);
+			oc.PrintF(_T("#if defined(GLLIBGEN_LOGCALLS)")); oc.IncIndent(); oc.NextLine();
+			oc.PrintF(_T("_ftprintf(stderr, _T(\"%s\"), %s);"), cbcode_str.c_str(), cbcode_args.c_str()); oc.DecIndent(); oc.NextLine();
+			oc.PrintF(_T("#endif"));
+		}
 
 		if (needsret)
 		{
@@ -1197,7 +1351,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 		{
 			gLog = new CGenTextOutput(stderr);
 
-			gLog->PrintF(_T("GLlibgen v1.0 - Copyright (c) 2016-2020, Keelan Stuart. All Rights Reserved."));
+			gLog->PrintF(_T("GLlibgen v1.1 - Copyright (c) 2016-2021, Keelan Stuart. All Rights Reserved."));
 			gLog->NextLine(1);
 			gLog->Flush();
 
@@ -1240,6 +1394,8 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			crcval = crc.Calculate((const UINT8 *)&gOGLVersionMax, sizeof(SVersion), crcval);
 			crcval = crc.Calculate((const UINT8 *)&gAfxInclude, sizeof(bool), crcval);
 			crcval = crc.Calculate((const UINT8 *)&gPchInclude, sizeof(bool), crcval);
+			crcval = crc.Calculate((const UINT8 *)&gPullDocs, sizeof(bool), crcval);
+			crcval = crc.Calculate((const UINT8 *)&gProvideLogCallback, sizeof(bool), crcval);
 			crcval = crc.Calculate((const UINT8 *)gOSVIncludes, sizeof(bool) * EOSV_UNKNOWN, crcval);
 
 			// parse out the opengl baseline header
@@ -1251,6 +1407,9 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 					// parse out the wgl extensions header
 					if (ParseFunctionsFromFile(wglextloc.c_str(), functype_to_funcname, funcname_to_funcdata, define_to_value, crc, crcval))
 					{
+						if (gPullDocs)
+							DownloadAndExtractDecriptions(funcname_to_funcdata);
+
 						WriteCPPWrapper(out_name_h, out_name_cpp, functype_to_funcname, funcname_to_funcdata, define_to_value, crcval);
 					}
 					else
