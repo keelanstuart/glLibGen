@@ -1,7 +1,7 @@
 # glLibGen - an OpenGL wrapper class code generator for C++
 Downloads and parses OpenGL-related headers and online documentation, from which it extracts functions and their descriptions which are placed in comments. With intellisense, you can scroll through all gl functions, see which version spec they were introduced in, and get a link to the online docs for more information. Add it as a pre-build step to your project.
 
-glLibGen, Copyright ©2016-2020, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved. Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement, provided that the above copyright notice appears in all copies, modifications, and distributions. Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for any fitness of purpose of this software.
+glLibGen, Copyright ©2016-2021, Keelan Stuart (hereafter referenced as AUTHOR). All Rights Reserved. Permission to use, copy, modify, and distribute this software is hereby granted, without fee and without a signed licensing agreement, provided that the above copyright notice appears in all copies, modifications, and distributions. Furthermore, AUTHOR assumes no responsibility for any damages caused either directly or indirectly by the use of this software, nor vouches for any fitness of purpose of this software.
 All other copyrighted material contained herein is noted and rights attributed to individual copyright holders.
 
 glLibTest _(part of the main sln)_ uses glLibGen as a pre-build event to generate its OpenGL code. It then uses it to render a very simple scene in an MFC window.
@@ -57,9 +57,19 @@ Note: build Release first... the pre-build step in the glLibTest project uses th
 
 >khr                   ; includes Khronos extensions
 
+>hp                    ; includes Hewlett-Packard extensions
+
+>ibm                   ; includes IBM extensions
+
+>gremedy               ; includes GRemedy (geDebugger) extensions
+
 >afx                   ; adds "#include <stdafx.h>"
 
 >pch                   ; adds "#include <pch.h>"
+
+>docs                  ; adds downloads documentation for each function and adds comments above the declaration in the header
+
+>logcb                 ; adds a line that logs your OpenGL calls to stderr
 
 
 ***
