@@ -272,7 +272,7 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
                                 DWORD lasterr = GetLastError();
                                 if (lasterr == ERROR_IO_PENDING)
                                 {
-                                    if (WaitForSingleObject(m_SemReqComplete, 20000) == WAIT_TIMEOUT)
+                                    if (WaitForSingleObject(m_SemReqComplete, 8000) == WAIT_TIMEOUT)
                                     {
                                         break;
                                     }

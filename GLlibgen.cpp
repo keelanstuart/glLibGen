@@ -17,6 +17,8 @@ All other copyrighted material contained herein is noted and rights attributed t
 #include <tinyxml2.h>
 #include "GenCRC.h"
 #include <Pool/Include/Pool.h>
+#include <chrono>
+#include <ctime>
 
 typedef struct sDocLinkData
 {
@@ -756,12 +758,13 @@ void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR 
 {
 	if (!_tcsicmp(paramtype, _T("GLchar")) && ptr)
 	{
-		str += _T("%s");
+		str += _T("%S");
 		arg += paramname;
 	}
 	else if (!_tcsicmp(paramtype, _T("GLenum")) || ptr)
 	{
 		str += _T("0x%X");
+		arg += _T("(unsigned int)");
 		arg += paramname;
 	}
 	else if (!_tcsicmp(paramtype, _T("GLboolean")))
@@ -780,6 +783,8 @@ void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR 
 	}
 	else
 	{
+		if (_tcsstr(paramtype, _T("64")))
+			str += _T("%ll");
 		str += _T("%d");
 		arg += paramname;
 	}
@@ -883,8 +888,23 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	oh.PrintF(_T("class %s"), gClassName.c_str()); oh.NextLine();
 	oh.PrintF(_T("{")); oh.NextLine();
 
+	if (gProvideLogCallback)
+	{
+		oh.PrintF(_T("public:"));
+		oh.IncIndent(); oh.NextLine();
+
+		oh.PrintF(_T("typedef void(__cdecl* GLLIBGEN_LOGFUNC)(const wchar_t *msg, void *userdata);")); oh.NextLine();
+		oh.DecIndent(); oh.NextLine(1);
+	}
+
 	oh.PrintF(_T("private:"));
 	oh.IncIndent(); oh.NextLine();
+	if (gProvideLogCallback)
+	{
+		oh.PrintF(_T("GLLIBGEN_LOGFUNC m_pLogFunc;")); oh.NextLine();
+		oh.PrintF(_T("void *m_LogFuncUserData;")); oh.NextLine(1);
+	}
+
 	oh.PrintF(_T("void *GetAnyGLFuncAddress(const TCHAR *name);"));
 
 	oh.DecIndent(); oh.NextLine(1);
@@ -893,7 +913,12 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 	oh.PrintF(_T("%s();"), gClassName.c_str()); oh.NextLine();
 	oh.PrintF(_T("~%s();"), gClassName.c_str()); oh.NextLine();
-	oh.PrintF(_T("bool Initialize();"));
+	oh.PrintF(_T("bool Initialize();")); oh.NextLine(1);
+
+	if (gProvideLogCallback)
+	{
+		oh.PrintF(_T("void SetLogFunc(GLLIBGEN_LOGFUNC logfunc = nullptr, void *logfunc_userdata = nullptr);"));
+	}
 
 	CHttpDownloader docdl;
 
@@ -1090,6 +1115,15 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	oc.PrintF(_T("return p;")); oc.DecIndent(); oc.NextLine();
 	oc.PrintF(_T("}")); oc.NextLine(2);
 
+	if (gProvideLogCallback)
+	{
+		oc.PrintF(_T("void %s::SetLogFunc(GLLIBGEN_LOGFUNC logfunc, void *logfunc_userdata)"), gClassName.c_str()); oc.NextLine();
+		oc.PrintF(_T("{")); oc.IncIndent(); oc.NextLine();
+		oc.PrintF(_T("m_pLogFunc = logfunc;")); oc.NextLine();
+		oc.PrintF(_T("m_LogFuncUserData = logfunc_userdata;")); oc.DecIndent(); oc.NextLine();
+		oc.PrintF(_T("}")); oc.NextLine(2);
+	}
+
 	oc.PrintF(_T("bool %s::Initialize()"), gClassName.c_str()); oc.NextLine();
 	oc.PrintF(_T("{")); oc.IncIndent();
 
@@ -1273,10 +1307,17 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 		if (gProvideLogCallback)
 		{
+			oc.DecIndent();
 			oc.NextLine(1);
 			oc.PrintF(_T("#if defined(GLLIBGEN_LOGCALLS)")); oc.IncIndent(); oc.NextLine();
-			oc.PrintF(_T("_ftprintf(stderr, _T(\"%s\"), %s);"), cbcode_str.c_str(), cbcode_args.c_str()); oc.DecIndent(); oc.NextLine();
+			oc.PrintF(_T("if (m_pLogFunc)")); oc.NextLine();
+			oc.PrintF(_T("{")); oc.IncIndent(); oc.NextLine();
+			oc.PrintF(_T("wchar_t msg[2048];")); oc.NextLine();
+			oc.PrintF(_T("_snwprintf_s(msg, 2048, L\"%s\"%s%s);"), cbcode_str.c_str(), cbcode_args.empty() ? _T("") : _T(", "), cbcode_args.c_str()); oc.NextLine();
+			oc.PrintF(_T("m_pLogFunc(msg, m_LogFuncUserData);")); oc.DecIndent(); oc.NextLine();
+			oc.PrintF(_T("}")); oc.DecIndent(); oc.NextLine();
 			oc.PrintF(_T("#endif"));
+			oc.IncIndent();
 		}
 
 		if (needsret)
@@ -1334,6 +1375,10 @@ void CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname,
 
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
+	std::time_t finish_op, start_op = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	struct tm finish_tm, start_tm;
+	localtime_s(&start_tm, &start_op);
+
 	int nRetCode = 0;
 
 	HMODULE hModule = ::GetModuleHandle(nullptr);
@@ -1433,6 +1478,23 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 			gLog->PrintF(_T("Finished!"));
 			gLog->NextLine(1);
 			gLog->Flush();
+
+			time(&finish_op);
+			int elapsed = (int)difftime(finish_op, start_op);
+
+			int hours = elapsed / 3600;
+			elapsed %= 3600;
+
+			int minutes = elapsed / 60;
+			int seconds = elapsed % 60;
+
+			localtime_s(&finish_tm, &finish_op);
+
+			TCHAR timebuf[160];
+			_tcsftime(timebuf, 160, _T("%R:%S   %A, %e %B %Y"), &finish_tm);
+
+			gLog->PrintF(_T("Elapsed Time: %02d:%02d:%02d"), hours, minutes, seconds);
+			gLog->NextLine(1);
 
 			if (gLog)
 			{
