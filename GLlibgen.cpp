@@ -754,14 +754,25 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 	return true;
 }
 
-void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR *paramname, tstring & str, tstring & arg)
+void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, bool ptrptr, const TCHAR *paramname, tstring & str, tstring & arg)
 {
-	if (!_tcsicmp(paramtype, _T("GLchar")) && ptr)
+	if (!_tcsicmp(paramtype, _T("GLchar")) && ptr && !ptrptr)
 	{
 		str += _T("%S");
 		arg += paramname;
 	}
-	else if (!_tcsicmp(paramtype, _T("GLenum")) || ptr)
+	else if (_tcsstr(paramtype, _T("ptr")) || ptr
+		|| !_tcsicmp(paramtype, _T("GLeglClientBufferEXT"))
+		|| !_tcsicmp(paramtype, _T("GLsync"))
+		|| !_tcsicmp(paramtype, _T("GLDEBUGPROC"))
+		|| !_tcsicmp(paramtype, _T("GLeglImageOES"))
+		)
+	{
+		str += _T("[%p]");
+		arg += _T("(void *)");
+		arg += paramname;
+	}
+	else if (!_tcsicmp(paramtype, _T("GLenum")) || !_tcsicmp(paramtype, _T("GLbitfield")))
 	{
 		str += _T("0x%X");
 		arg += _T("(unsigned int)");
@@ -775,7 +786,7 @@ void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR 
 	}
 	else if ((!_tcsicmp(paramtype, _T("GLfloat"))) ||
 		(!_tcsicmp(paramtype, _T("GLclampf"))) ||
-		(!_tcsicmp(paramtype, _T("GLfloat"))) ||
+		(!_tcsicmp(paramtype, _T("GLdouble"))) ||
 		(!_tcsicmp(paramtype, _T("GLclampd"))))
 	{
 		str += _T("%f");
@@ -783,9 +794,10 @@ void AppendLogComponentsFromType(const TCHAR * paramtype, bool ptr, const TCHAR 
 	}
 	else
 	{
+		str += _T("%");
 		if (_tcsstr(paramtype, _T("64")))
-			str += _T("%ll");
-		str += _T("%d");
+			str += _T("ll");
+		str += _T("d");
 		arg += paramname;
 	}
 }
@@ -1216,6 +1228,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 		while (pp.NextToken())
 		{
 			bool ptr = false;
+			bool ptrptr = false;
 			bool ref = false;
 
 			while (pp.IsToken(_T("const")) || pp.IsToken(_T("struct")))
@@ -1246,6 +1259,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 
 			if (pp.IsToken(_T("*")))
 			{
+				ptrptr = true;
 				pp.NextToken();
 				ptr = true;
 			}
@@ -1268,7 +1282,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 				cbcode_args += _T(", ");
 			}
 
-			AppendLogComponentsFromType(pt.c_str(), ptr, pn.c_str(), cbcode_str, cbcode_args);
+			AppendLogComponentsFromType(pt.c_str(), ptr, ptrptr, pn.c_str(), cbcode_str, cbcode_args);
 
 			// should be the parameter name
 			oc.PrintF(_T("%s"), pn.c_str());
@@ -1301,7 +1315,7 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 			cbcode_str += _T(" => ");
 			if (!cbcode_args.empty())
 				cbcode_args += _T(", ");
-			AppendLogComponentsFromType(cit.second.ret.c_str(), (cit.second.ret.find('*') == tstring::npos) ? false : true, _T("ret"), cbcode_str, cbcode_args);
+			AppendLogComponentsFromType(cit.second.ret.c_str(), (cit.second.ret.find('*') == tstring::npos) ? false : true, false, _T("ret"), cbcode_str, cbcode_args);
 		}
 
 
