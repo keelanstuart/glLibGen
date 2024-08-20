@@ -23,7 +23,7 @@ All other copyrighted material contained herein is noted and rights attributed t
 
 #if defined(_DEBUG) || defined(DEBUG)
 
-#if !defined(DOWNLOADER_USES_WININET)
+#if defined(DOWNLOADER_USES_CURL)
 
 #if defined(_M_X64)
 #pragma comment(lib, "libcurl_64D.lib")
@@ -35,7 +35,7 @@ All other copyrighted material contained herein is noted and rights attributed t
 
 #else
 
-#if !defined(DOWNLOADER_USES_WININET)
+#if defined(DOWNLOADER_USES_CURL)
 
 #if defined(_M_X64)
 #pragma comment(lib, "libcurl_64.lib")
@@ -75,7 +75,7 @@ CHttpDownloader::CHttpDownloader()
 	s_InstCount++;
 
 	InternetSetStatusCallback(m_hInet, (INTERNET_STATUS_CALLBACK)DownloadStatusCallback);
-#else
+#elseif defined(DOWNLOADER_USES_CURL)
 	m_pCURL = curl_easy_init();
 #endif
 }
@@ -99,7 +99,7 @@ CHttpDownloader::~CHttpDownloader()
 		CloseHandle(m_SemReqComplete);
 		m_SemReqComplete = NULL;
 	}
-#else
+#elseif defined(DOWNLOADER_USES_CURL)
 	if (m_pCURL)
 	{
 		curl_easy_cleanup(m_pCURL);
@@ -134,9 +134,8 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 
     CreateDirectories(szDestDir);
 
-#if defined(DOWNLOADER_USES_WININET)
 
-	TCHAR filepath[MAX_PATH];
+	TCHAR filepath[MAX_PATH * 4];
 	filepath[0] = '\0';
 
 	// If a destination file was specified, then create the file handle
@@ -159,6 +158,8 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 			return CopyFile(szUrl, filepath, false);
 		}
 	}
+
+#if defined(DOWNLOADER_USES_WININET)
 
 	UINT8 buffer[2][BUFFER_SIZE];
 
@@ -318,7 +319,9 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
                                 // Exit the download loop
                                 break;
                             }
-                        }
+						
+							Sleep(0);
+						}
                         while ((inbuf[bufidx].dwBufferLength > 0) && (amount_downloaded < amount_to_download));
 
                         // inbuf[bufidx].dwBufferLength will be 0 when all data is read
@@ -348,7 +351,7 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 		}
 	}
 
-#else
+#elseif defined(DOWNLOADER_USES_CURL)
 
 	if (m_pCURL)
 	{
@@ -490,6 +493,14 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 			}
 		}
 	}
+
+#else //if defined(DOWNLOADER_USES_INVWEBREQ)
+
+	std::wstring url = szUrl;
+	std::wstring outputPath = filepath;
+	std::wstring command = L"powershell.exe Invoke-WebRequest -Uri \"" + url + L"\" -OutFile \"" + outputPath + L"\"";
+
+	ShellExecuteW(NULL, L"open", L"powershell.exe", command.c_str(), NULL, SW_HIDE);
 
 #endif
 

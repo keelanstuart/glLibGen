@@ -8,14 +8,15 @@ All other copyrighted material contained herein is noted and rights attributed t
 */
 
 #pragma once
-
-#define DOWNLOADER_USES_WININET
+#define DOWNLOADER_USES_INVWEBREQ
+//#define DOWNLOADER_USES_WININET
 
 #if defined(DOWNLOADER_USES_WININET)
 #include <wininet.h>
-#else
+#elseif defined(DOWNLOADER_USES_CURL)
 #include <curl/curl.h>
 #include <curl/easy.h>
+#elseif defined(DOWNLOADER_USES_INVWEBREQ)
 #endif
 
 class CHttpDownloader
@@ -38,7 +39,7 @@ protected:
 	HINTERNET m_hInet;
 	HINTERNET m_hUrl;
 	HANDLE m_SemReqComplete;
-#else
+#elseif defined(DOWNLOADER_USES_CURL)
 	CURL *m_pCURL;
 #endif
 
