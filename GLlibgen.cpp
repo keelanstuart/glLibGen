@@ -601,15 +601,12 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 		else
 			continue;
 
-		SFunctionData *funcdata = &(it->second);
 		const TCHAR *funcname = it->first.c_str();
+		SFunctionData *funcdata = &(it->second);
 
-		ptp->RunTask([](void *param0, void *param1, size_t task_number) -> pool::IThreadPool::TASK_RETURN
+		ptp->RunTask([_funcname = funcname, _funcdata = funcdata](size_t task_number) -> pool::IThreadPool::TASK_RETURN
 		{
-			const TCHAR *funcname = (const TCHAR *)param0;
-			SFunctionData *funcdata = (SFunctionData *)param1;
-
-			tstring desctext = funcname;
+			tstring desctext = _funcname;
 
 			UINT dli = 0;
 			bool gotdoc = false;
@@ -619,11 +616,11 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 			while (docdata[dli].baseurl != nullptr)
 			{
 				doclink = docdata[dli].baseurl;
-				doclink += funcname;
+				doclink += _funcname;
 				doclink += docdata[dli].ext;
 
 				doclocal = _T("gllibgen_doctemp");
-				doclocal += funcname;
+				doclocal += _funcname;
 				doclocal += docdata[dli].ext;
 
 				gLog->PrintF(_T("."));
@@ -701,7 +698,7 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 								TCHAR *s = _tcsstr(buf, _T("refnamediv"));
 								if (s)
 								{
-									s = _tcsstr(s, funcname);
+									s = _tcsstr(s, _funcname);
 									if (s)
 									{
 										//gLog->PrintF(_T("."));
@@ -737,12 +734,12 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 				desctext[invchr] = _T('-');
 
 			//gLog->PrintF(_T("."));
-			funcdata->desc = desctext;
-			funcdata->doclink = doclink;
+			_funcdata->desc = desctext;
+			_funcdata->doclink = doclink;
 
 			return pool::IThreadPool::TASK_RETURN::TR_OK;
 
-		}, (void *)funcname, (void *)funcdata);
+		});
 	}
 
 	ptp->Flush();
