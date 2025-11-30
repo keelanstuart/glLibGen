@@ -76,8 +76,8 @@ Note: build Release first... the pre-build step in the glLibTest project uses th
 
 ### EXAMPLES:
 
-```glLibGen64.exe -ver:4.5 -class:"COpenGL" -basefile:"gl_wrapper" -outdir:"c:\myproj" -glh:"C:\Program Files (x86)\Windows Kits\10\Include\10.0.16299.0\um\gl\GL.h" -glexth:"https://www.khronos.org/registry/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h"```
-_Creates gl_wrapper.h and gl_wrapper.cpp in c:\myproj and copies the relevant .h files for OpenGL there, too. COpenGL will include all 4.5 spec functions_
+```glLibGen64.exe -class:"COpenGL" -basefile:"gl_wrapper" -outdir:"$(ProjectDir)Test" -ver:4.6 -glh:"$(CppWinRT_IncludePath)\..\um\gl\GL.h" -glexth:"https://registry.khronos.org/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h" -pch -khr -ext -logcb -docs```
+_Creates gl_wrapper.h and gl_wrapper.cpp in your project directory (under .\Test) and copies the relevant .h files for OpenGL there, too. COpenGL will include all 4.6 spec functions and be documented to indicate the function's purpose. Will include <pch.h> at the top._
 
 ```glLibGen64.exe -ver:3.2 -khr -pch -class:"Cogl" -basefile:"Cogl" -outdir:"d:\somewhere" -glh:"C:\Program Files (x86)\Windows Kits\10\Include\10.0.16299.0\um\gl\GL.h" -glexth:"https://www.khronos.org/registry/OpenGL/api/GL/glext.h" -wglexth:"https://www.khronos.org/registry/OpenGL/api/GL/wglext.h" -khrh:"https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h"```
 _Creates Cogl.h and Cogl.cpp in d:\somewhere and copies the relevant .h files for OpenGL there, too. COpenGL will include all 3.2 spec functions, as well as all specifically-marked KHRONOS extensions. Will include <pch.h> at the top>_
