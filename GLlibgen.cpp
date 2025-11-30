@@ -1355,8 +1355,11 @@ bool WriteCPPWrapper(tstring &out_name_h, tstring &out_name_cpp, TMapStrStr &fun
 	return true;
 }
 
-void CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname, const TCHAR *dstfullname, const TCHAR *dstdir)
+bool CreateDirectories(const TCHAR *dir);
+
+bool CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname, const TCHAR *dstfullname, const TCHAR *dstdir)
 {
+	bool ret = true;
     if (PathIsURL(src))
     {
         gLog->PrintF(_T("Downloading:"));
@@ -1364,11 +1367,12 @@ void CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname,
         gLog->NextLine();
         gLog->PrintF(_T("\"%s\" -> \"%s\""), src, dstfullname);
 
-        if (!dl.DownloadHttpFile(src, dstname, dstdir))
-        {
-
-        }
-    }
+		if (!dl.DownloadHttpFile(src, dstname, dstdir))
+		{
+			gLog->PrintF(_T("\t[FAILED]"));
+			ret = false;
+		}
+	}
     else
     {
         gLog->PrintF(_T("Copying:"));
@@ -1376,12 +1380,18 @@ void CopyOrDownload(CHttpDownloader &dl, const TCHAR *src, const TCHAR *dstname,
         gLog->NextLine();
         gLog->PrintF(_T("\"%s\" -> \"%s\""), src, dstfullname);
 
-        CopyFile(src, dstfullname, FALSE);
-    }
+		if (!CopyFile(src, dstfullname, FALSE))
+		{
+			gLog->PrintF(_T("\t[FAILED]"));
+			ret = false;
+		}
+	}
 
     gLog->DecIndent();
 
     gLog->NextLine(1);
+
+	return ret;
 }
 
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
@@ -1432,13 +1442,15 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 			CHttpDownloader dl;
 
-            CopyOrDownload(dl, gOGLHeaderLocation.c_str(), _T("gl.h"), glloc.c_str(), basedir.c_str());
+			CreateDirectories(basedir.c_str());
+			::Sleep(100);
 
-            CopyOrDownload(dl, gOGLEXTHeaderLocation.c_str(), _T("glext.h"), glextloc.c_str(), basedir.c_str());
+			bool got_files = true;
 
-            CopyOrDownload(dl, gOGLKHRPlatformHeaderLocation.c_str(), _T("khrplatform.h"), khrplatformloc.c_str(), khrplatformbasedir.c_str());
-
-			CopyOrDownload(dl, gWGLEXTHeaderLocation.c_str(), _T("wglext.h"), wglextloc.c_str(), basedir.c_str());
+			got_files &= CopyOrDownload(dl, gOGLHeaderLocation.c_str(), _T("gl.h"), glloc.c_str(), basedir.c_str());
+			got_files &= CopyOrDownload(dl, gOGLEXTHeaderLocation.c_str(), _T("glext.h"), glextloc.c_str(), basedir.c_str());
+			got_files &= CopyOrDownload(dl, gOGLKHRPlatformHeaderLocation.c_str(), _T("khrplatform.h"), khrplatformloc.c_str(), khrplatformbasedir.c_str());
+			got_files &= CopyOrDownload(dl, gWGLEXTHeaderLocation.c_str(), _T("wglext.h"), wglextloc.c_str(), basedir.c_str());
 
 			gLog->Flush();
 

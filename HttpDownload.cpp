@@ -496,11 +496,37 @@ BOOL CHttpDownloader::DownloadHttpFile(const TCHAR *szUrl, const TCHAR *szDestFi
 
 #else //if defined(DOWNLOADER_USES_INVWEBREQ)
 
+	auto RunAndWaitForPowershell = [](const TCHAR *command) -> bool
+	{
+		SHELLEXECUTEINFOW sei = { 0 };
+		sei.cbSize       = sizeof(sei);
+		sei.fMask        = SEE_MASK_NOCLOSEPROCESS;  // <- get hProcess
+		sei.hwnd         = NULL;
+		sei.lpVerb       = L"open";
+		sei.lpFile       = L"powershell.exe";
+		sei.lpParameters = command;
+		sei.lpDirectory  = NULL;
+		sei.nShow        = SW_HIDE;
+	
+		if (!ShellExecuteExW(&sei))
+			return false; // error starting
+	
+		// Wait for process to finish
+		WaitForSingleObject(sei.hProcess, INFINITE);
+	
+		// Optionally get exit code
+		DWORD exitCode = 0;
+		GetExitCodeProcess(sei.hProcess, &exitCode);
+	
+		CloseHandle(sei.hProcess);
+		return (exitCode == 0);
+	};
+
 	std::wstring url = szUrl;
 	std::wstring outputPath = filepath;
 	std::wstring command = L"powershell.exe Invoke-WebRequest -Uri \"" + url + L"\" -OutFile \"" + outputPath + L"\"";
 
-	ShellExecuteW(NULL, L"open", L"powershell.exe", command.c_str(), NULL, SW_HIDE);
+	retval = RunAndWaitForPowershell(command.c_str());
 
 #endif
 
