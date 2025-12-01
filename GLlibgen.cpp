@@ -29,10 +29,10 @@ typedef struct sDocLinkData
 
 const SDocLinkData docdata[] =
 {
-	{ _T("https://www.opengl.org/sdk/docs/man/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
-	{ _T("https://www.opengl.org/sdk/docs/man2/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
-	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
 	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
+	{ _T("https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
+	{ _T("https://www.opengl.org/sdk/docs/man2/xhtml/"), _T(".xml"), _T("body.div.div:2.p") },
+	{ _T("https://www.opengl.org/sdk/docs/man/html/"), _T(".xhtml"), _T("body.div.div:2.p") },
 
 	// keep this here so we know when to stop checking new URLs
 	{ nullptr, nullptr, nullptr }
@@ -581,165 +581,190 @@ bool ParseFunctionsFromFile(const TCHAR *filename, TMapStrStr &functype_to_funcn
 
 bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 {
-	gLog->PrintF(_T("Beginning auto-documentation process (%d functions)"), funcname_to_funcdata.size());
-
-	pool::IThreadPool *ptp = pool::IThreadPool::Create(1, 0);
-
+	int func_count = 0;
 	for (TMapStrFuncData::iterator it = funcname_to_funcdata.begin(); it != funcname_to_funcdata.end(); it++)
 	{
 		// is this extension's vendor allowed?
-		if (!gOSVIncludes[it->second.osv])
-			continue;
-
-		// is this extension's version is higher than what we're allowed?
-		if (it->second.ver.major <= gOGLVersionMax.major)
+		if (gOSVIncludes[it->second.osv])
 		{
-			// the major version was ok... minor, too?
-			if (it->second.ver.minor > gOGLVersionMax.minor)
-				continue;
-		}
-		else
-			continue;
-
-		const TCHAR *funcname = it->first.c_str();
-		SFunctionData *funcdata = &(it->second);
-
-		ptp->RunTask([_funcname = funcname, _funcdata = funcdata](size_t task_number) -> pool::IThreadPool::TASK_RETURN
-		{
-			tstring desctext = _funcname;
-
-			UINT dli = 0;
-			bool gotdoc = false;
-			tstring doclink;
-			tstring doclocal;
-
-			while (docdata[dli].baseurl != nullptr)
+			if (it->second.ver.major <= gOGLVersionMax.major)
 			{
-				doclink = docdata[dli].baseurl;
-				doclink += _funcname;
-				doclink += docdata[dli].ext;
+				// the major version was ok... minor, too?
+				if (it->second.ver.minor > gOGLVersionMax.minor)
+					continue;
+			}
+			else
+				continue;
 
-				doclocal = _T("gllibgen_doctemp");
-				doclocal += _funcname;
-				doclocal += docdata[dli].ext;
+			func_count++;
+		}
+	}
 
-				gLog->PrintF(_T("."));
+	gLog->PrintF(_T("Beginning auto-documentation process (%d functions)"), func_count);
 
-				CHttpDownloader taskdl;
-				gotdoc = taskdl.DownloadHttpFile(doclink.c_str(), doclocal.c_str(), _T("."));
-				if (gotdoc)
+	pool::IThreadPool *ptp = pool::IThreadPool::Create(1, 0);
+	std::atomic<int> tc = (int)ptp->GetNumThreads();
+
+	TMapStrFuncData::iterator it = funcname_to_funcdata.begin();
+	while (it != funcname_to_funcdata.end())
+	{
+		// is this extension's vendor allowed?
+		if (gOSVIncludes[it->second.osv])
+		{
+			// is this extension's version is higher than what we're allowed?
+			if ((it->second.ver.major <= gOGLVersionMax.major) &&
+				(it->second.ver.minor <= gOGLVersionMax.minor))
+			{
+				const TCHAR *funcname = it->first.c_str();
+				SFunctionData *funcdata = &(it->second);
+
+				while (!tc)
+					Sleep(50);
+
+				ptp->RunTask([&tc, _funcname = funcname, _funcdata = funcdata](size_t task_number)->pool::IThreadPool::TASK_RETURN
 				{
-					char buf[2049];
-					FILE *tmpf = nullptr;
+					tc--;
+					tstring desctext = _funcname;
 
-					// khronos returns a page that says 404, but doesn't indicate that in the html response... boooo...
-					// so look for their string in the returned data.
-					if ((_tfopen_s(&tmpf, doclocal.c_str(), _T("rb")) != EINVAL) && tmpf)
+					UINT dli = 0;
+					bool gotdoc = false;
+					tstring doclink;
+					tstring doclocal;
+
+					gLog->PrintF(_T("."));
+
+					while (docdata[dli].baseurl != nullptr)
 					{
-						size_t tmpbuflen = fread(buf, sizeof(char), 2048, tmpf);
-						buf[tmpbuflen] = 0;
-						if (strstr(buf, "404… Oops"))
-							gotdoc = false;
+						doclink = docdata[dli].baseurl;
+						doclink += _funcname;
+						doclink += docdata[dli].ext;
 
-						fclose(tmpf);
+						doclocal = _T("gllibgen_doctemp");
+						doclocal += _funcname;
+						doclocal += docdata[dli].ext;
+
+						CHttpDownloader taskdl;
+						gotdoc = taskdl.DownloadHttpFile(doclink.c_str(), doclocal.c_str(), _T("."));
+						if (gotdoc)
+						{
+							char buf[2049];
+							FILE *tmpf = nullptr;
+
+							// khronos returns a page that says 404, but doesn't indicate that in the html response... boooo...
+							// so look for their string in the returned data.
+							if ((_tfopen_s(&tmpf, doclocal.c_str(), _T("rb")) != EINVAL) && tmpf)
+							{
+								size_t tmpbuflen = fread(buf, sizeof(char), 2048, tmpf);
+								buf[tmpbuflen] = 0;
+								if (strstr(buf, "404… Oops"))
+									gotdoc = false;
+
+								fclose(tmpf);
+							}
+
+							if (gotdoc)
+								break;
+						}
+
+						dli++;
 					}
 
 					if (gotdoc)
-						break;
-				}
-
-				dli++;
-			}
-
-			if (gotdoc)
-			{
-				FILE *in_file_doc = nullptr;
-
-				if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt")) != EINVAL) && in_file_doc)
-				{
-					tinyxml2::XMLDocument doc;
-					if (tinyxml2::XML_SUCCESS == doc.LoadFile(in_file_doc))
 					{
-						const tinyxml2::XMLElement *root = doc.RootElement();
+						FILE *in_file_doc = nullptr;
 
-						const tinyxml2::XMLElement *desc = EvaluatePath(root, docdata[dli].descpath);
-						if (desc)
+						if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt")) != EINVAL) && in_file_doc)
 						{
-#if defined(UNICODE)
-							int len = MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, NULL, NULL);
-							if (len)
+							tinyxml2::XMLDocument doc;
+							if (tinyxml2::XML_SUCCESS == doc.LoadFile(in_file_doc))
 							{
-								desctext.resize(len + 1);
-								MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, (TCHAR *)(desctext.c_str()), sizeof(TCHAR) * (len + 1));
-								gLog->PrintF(_T("o"));
+								const tinyxml2::XMLElement *root = doc.RootElement();
 
-							}
+								const tinyxml2::XMLElement *desc = EvaluatePath(root, docdata[dli].descpath);
+								if (desc)
+								{
+#if defined(UNICODE)
+									int len = MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, NULL, NULL);
+									if (len)
+									{
+										desctext.resize(len + 1);
+										MultiByteToWideChar(CP_UTF8, 0, desc->GetText(), -1, (TCHAR *)(desctext.c_str()), sizeof(TCHAR) * (len + 1));
+										gLog->PrintF(_T("o"));
+
+									}
 #else
-							desctext = desc->GetText();
+									desctext = desc->GetText();
 #endif
+								}
+							}
+							else
+							{
+								fclose(in_file_doc);
+								in_file_doc = nullptr;
+
+								if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt, ccs=UTF-8")) != EINVAL) && in_file_doc)
+								{
+									_fseeki64(in_file_doc, 0, SEEK_END);
+									size_t in_size = (size_t)_ftelli64(in_file_doc);
+									_fseeki64(in_file_doc, 0, SEEK_SET);
+
+									TCHAR *buf = (in_size > 0) ? (TCHAR *)malloc(sizeof(TCHAR) * in_size) : nullptr;
+									if (buf)
+									{
+										fread_s(buf, sizeof(TCHAR) * in_size, sizeof(TCHAR), in_size, in_file_doc);
+
+										TCHAR *s = _tcsstr(buf, _T("refnamediv"));
+										if (s)
+										{
+											s = _tcsstr(s, _funcname);
+											if (s)
+											{
+												//gLog->PrintF(_T("."));
+
+												TCHAR *e = _tcsstr(s, _T("</p>"));
+												if (e)
+												{
+													*e = _T('\0');
+													gLog->PrintF(_T("o"));
+													desctext = s;
+												}
+											}
+										}
+
+										free(buf);
+									}
+								}
+							}
+
+							if (in_file_doc)
+								fclose(in_file_doc);
 						}
+
+						DeleteFile(doclocal.c_str());
 					}
 					else
 					{
-						fclose(in_file_doc);
-						in_file_doc = nullptr;
-
-						if ((_tfopen_s(&in_file_doc, doclocal.c_str(), _T("rt, ccs=UTF-8")) != EINVAL) && in_file_doc)
-						{
-							_fseeki64(in_file_doc, 0, SEEK_END);
-							size_t in_size = (size_t)_ftelli64(in_file_doc);
-							_fseeki64(in_file_doc, 0, SEEK_SET);
-
-							TCHAR *buf = (in_size > 0) ? (TCHAR *)malloc(sizeof(TCHAR) * in_size) : nullptr;
-							if (buf)
-							{
-								fread_s(buf, sizeof(TCHAR) * in_size, sizeof(TCHAR), in_size, in_file_doc);
-
-								TCHAR *s = _tcsstr(buf, _T("refnamediv"));
-								if (s)
-								{
-									s = _tcsstr(s, _funcname);
-									if (s)
-									{
-										//gLog->PrintF(_T("."));
-
-										TCHAR *e = _tcsstr(s, _T("</p>"));
-										if (e)
-										{
-											*e = _T('\0');
-											gLog->PrintF(_T("o"));
-											desctext = s;
-										}
-									}
-								}
-
-								free(buf);
-							}
-						}
+						gLog->PrintF(_T("x"));
+						doclink.clear();
 					}
 
-					if (in_file_doc)
-						fclose(in_file_doc);
-				}
+					size_t invchr = desctext.find_first_of(_T('—'));
+					if (invchr < desctext.length())
+						desctext[invchr] = _T('-');
 
-				DeleteFile(doclocal.c_str());
+					//gLog->PrintF(_T("."));
+					_funcdata->desc = desctext;
+					_funcdata->doclink = doclink;
+
+					tc++;
+
+					return pool::IThreadPool::TASK_RETURN::TR_OK;
+
+				});
 			}
-			else
-			{
-				doclink.clear();
-			}
+		}
 
-			size_t invchr = desctext.find_first_of(_T('—'));
-			if (invchr < desctext.length())
-				desctext[invchr] = _T('-');
-
-			//gLog->PrintF(_T("."));
-			_funcdata->desc = desctext;
-			_funcdata->doclink = doclink;
-
-			return pool::IThreadPool::TASK_RETURN::TR_OK;
-
-		});
+		it++;
 	}
 
 	ptp->Flush();
