@@ -621,7 +621,7 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 				while (!tc)
 					Sleep(50);
 
-				ptp->RunTask([&tc, _funcname = funcname, _funcdata = funcdata](size_t task_number)->pool::IThreadPool::TASK_RETURN
+				ptp->RunTask([&tc, _funcname = funcname, _funcdata = funcdata](size_t task_number)->pool::IThreadPool::TaskReturn
 				{
 					tc--;
 					tstring desctext = _funcname;
@@ -758,7 +758,7 @@ bool DownloadAndExtractDecriptions(TMapStrFuncData& funcname_to_funcdata)
 
 					tc++;
 
-					return pool::IThreadPool::TASK_RETURN::TR_OK;
+					return pool::IThreadPool::TaskReturn::OK;
 
 				});
 			}
